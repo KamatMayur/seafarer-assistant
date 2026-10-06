@@ -1,0 +1,139 @@
+# Rules for classifying and tagging DGMA documents without an LLM.
+#
+# Every pattern is a Python regex, matched case-insensitively. Use (?-i:...) for case-sensitive tokens (AB, OS).
+# For each tag value:
+#   title: patterns checked against the title (one hit is enough)
+#   body:  patterns checked against the PDF text (default: same as title); need `min_body_hits` total matches
+# Body text is only used when the document's text policy allows it.
+
+min_body_hits: 2
+review_threshold: 0.65    # below this the document is held for admin review (all unknown doc types are)
+
+# Site "Type" column / year-list type -> doc_type. Checked first.
+site_types:
+  "DGS Circulars": circular
+  "DGS Orders": order
+  "MS Notices": notice
+  "Advisory": advisory
+  "Exam Schedule and Notices": exam_schedule
+  "Exam Results": result
+  "COC Dispatch List": notice
+  "Acts & Rules": rules
+  "MMD Circular/Notice/Order": notice
+  "General Letters": notice
+
+# Title rules override the site type when they are more specific. First match wins.
+doc_type_title_rules:
+  - {type: result,        pattern: '\bresults?\b(?! in)|\bpass(ed)? list'}
+  - {type: exam_schedule, pattern: 'seat booking|exam(ination)?s?\b.{0,40}\b(schedule|time ?table|date|notice|calendar)|signal (exam|notice)|\b(written|oral|function) (exam|examination)|notice (to|for)\b.{0,40}\bcandidates'}
+  - {type: advisory,      pattern: '\badvisory\b|\bpiracy\b|armed robbery|security alert|best management practices'}
+  - {type: order,         pattern: '^\s*(dgs|dgma) order\b|\border no\b'}
+  - {type: notice,        pattern: 'dispatch list|speed post'}
+  - {type: exam_schedule, pattern: '\bexaminations?\b|\bexams?\b'}
+  - {type: notice,        pattern: '^\s*notice\b'}
+
+# Site types / titles that are about the Directorate's own administration, not seafarers. No alerts.
+internal:
+  site_types: ["Vacancy", "Tenders", "Office Order", "Annual Report", "Budget Manual", "Quality Management System", "User Manual"]
+  title: ['\bvacanc(y|ies)\b', '\bdeputation\b', '\btenders?\b', '\bGeM\b', '\bprocurement\b', 'e-?auction', '\bquotations?\b',
+          '\bRTI\b', 'hindi (pakhwada|fortnight|diwas)', 'official language', '\bswachh', 'vigilance awareness',
+          'transfers? (and|&) postings?', '\bempanelment\b', 'recruitment (rules )?(to|for|of) the post', '\bpension(ers)?\b',
+          'annual property return']
+
+# Documents with none of the seafarer indicators but some of these are for shipowners/ports/institutes.
+industry:
+  title: ['port facilit', 'ship ?owners?', 'shipping compan', 'recogni[sz]ed organi[sz]ation', 'classification societ',
+          'ballast water', 'ship recycling', '\bcargo\b', 'tonnage', 'registration of (indian )?ships', 'ship registr',
+          '\bMTO\b', 'multimodal', 'shipbuild', 'port state control', '\bsurvey(s|ors?)?\b', '\bMTIs?\b', 'maritime training institut']
+
+# Documents of these types are for seafarers unless they are internal.
+seafarer_doc_types: [exam_schedule, result, advisory]
+seafarer_site_types: ["COC Dispatch List", "Exam Results", "Exam Schedule and Notices", "Advisory"]
+
+seafarer_indicators:
+  title: ['lifeboat', 'life-?saving', '\bLSA\b', '\bFFA\b', 'safety (alert|bulletin|video|campaign)', '\baccident', 'enclosed space',
+          'sagar mein', '\bGMDSS\b', 'speed post', 'approved doctors', 'medical examiners?', 'unclaimed', '\bfraud', '\bfake\b', 'seafar', '\bcrew', '\bCoCs?\b', '\bCoPs?\b', '\bCDCs?\b', '\bBSID\b', '\bINDoS\b', 'candidates?', 'cadets?',
+          '\bratings?\b', '\bofficers?\b', '\bexam', '\bcourses?\b', 'sign[- ]?(on|off)', 'medical fitness', '\bSTCW\b',
+          'watchkeep', 'sea service', '\bMMDs?\b', 'e-?samu?n?dra', 'e-?navik', '\bRPSL?\b', 'manning agenc', 'recruitment and placement',
+          'piracy', 'security of (indian )?seafarers', '\bmasters?\b', '\bmates?\b', '\bMEO\b', '\bETOs?\b', 'certificate of competency',
+          'continuous discharge', 'dispatch list', 'endorsement', 'revalidat', 'preparatory course', 'model course']
+
+critical:
+  # A document is critical when it is an advisory AND one of these match the title (or a source hints critical).
+  title: ['piracy', 'armed robbery', 'security', 'high risk area', '\bHRA\b', 'conflict', '\bwar\b', 'attack', 'missile', 'drone',
+          'hostilit', 'red sea', 'hormuz', 'gulf of aden', 'persian gulf', 'evacuat', 'safety of (indian )?seafarers']
+
+relations:
+  title: '\b(addendum|corrigendum|amendment|supersession|supersedes|modification|in continuation|revised|clarification)\b'
+  # Checked in the first 2000 characters of the PDF text; only unambiguous wording.
+  body: '\b(supersession|supersedes|addendum|corrigendum|in partial modification|in continuation)\b'
+  reference: '\b(?:circular|notice|order)\s*(?:no\.?\s*)?(\d{1,3})\s*of\s*(\d{4})'
+
+tags:
+  department:
+    engine:     {title: ['\bMEO\b', 'marine engineer', '\bengine (room|cadet|rating|department|watch)', 'engineering (wing|branch|candidates|exam|cadet)', '\bTEAP\b', '(steam|motor) endorsement', '\bGME\b', 'graduate marine engineering', '\bwipers?\b', 'motorman', '\bfitters?\b']}
+    deck:       {title: ['\bnautical (grade|exam|candidates?|cadets?)', '\bmasters?\b(?! ?(plan|data|list))', '\b(second|2nd|first|1st|chief) mate', '\bmates?\b', '\bNWKO\b', 'navigational watch', '\bdeck\b', '\bGMDSS\b', 'signal (exam|notice)', '\bDNS\b', 'B\.?\s?Sc\.?\s*nautical', 'dredge (mate|master)', '\bskippers?\b', 'able seafarer deck', '(?-i:\bAB\b)']}
+    electrical: {title: ['\bETOs?\b', 'electro[- ]?technical', '\bETRs?\b']}
+    catering:   {title: ['\bcooks?\b', '\bcatering\b', '\bstewards?\b', '\bgalley\b', '\bchefs?\b', '\bsaloon\b']}
+  level:
+    officer: {title: ['\bCoCs?\b', 'certificate of competency', '\bofficers?\b', '\bMEO\b', '\bmates?\b', '\bmasters?\b(?! ?(plan|data|list))', '\bETOs?\b', '\bNWKO\b']}
+    rating:  {title: ['\bratings?\b', '(?-i:\bAB\b)', 'able seafarer', 'ordinary seam[ae]n', '(?-i:\bOS\b)', '\bwipers?\b', 'motorman', '\bfitters?\b', '\bbosun\b', '\bpumpman\b', '\bGP\b', 'general purpose']}
+    cadet:   {title: ['\bcadets?\b', '\btrainees?\b', 'pre-?sea', '\bDNS\b', 'B\.?\s?Sc\.?\s*nautical', '\bGME\b', 'graduate marine engineering', 'apprentice']}
+  certificate_type:
+    coc:           {title: ['\bCoCs?\b', 'certificates? of competency', 'competency certificate', '\bCOE\b', 'certificate of equivalent', 'revalidation of (certificate|CoC)'], body: ['\bCoCs?\b', 'certificates? of competency']}
+    cop:           {title: ['\bCoPs?\b', 'certificates? of proficiency', 'proficiency certificate']}
+    stcw_basic:    {title: ['basic safety', '\bSTCW basic', '\bPST\b', '\bFPFF\b', '\bEFA\b', '\bPSSR\b', '\bSTSDSD\b', '(ship|seafarers?)\W? security awareness', '\bBST\b', 'basic training']}
+    stcw_advanced: {title: ['advanced fire', '\bAFF\b', '\bMFA\b', 'medical first aid', 'medical care', '\bPSCRB\b', 'survival craft', '\bFRB\b', '\bDCE\b', 'tanker (familiari[sz]ation|course|training)', '\bOCTCO\b', '\bCHEMCO\b', '\bGASCO\b', '\bIGF\b', '\bpolar\b', '\bECDIS\b', '\bARPA\b', '\bGOC\b', '\bROC\b', 'high voltage', '\bHVM?\b', '\bBTM\b', '\bBRM\b', '\bERRM\b', 'ship security officer', '\bSSO\b', 'refresher', 'upgradation course']}
+    medical:       {title: ['medical (fitness|examination|examiners?|certificate|practitioner)', '\bPEME\b', 'fit(ness)? certificate']}
+    cdc:           {title: ['\bCDCs?\b', 'continuous discharge']}
+    passport:      {title: ['\bpassports?\b']}
+    bsid:          {title: ['\bBSID\b', 'biometric seafarer', 'seafarers?\W? identity document', '(?-i:\bSID\b)']}
+    visa:          {title: ['\bvisas?\b']}
+  ship_type:
+    tanker:    {title: ['\btankers?\b', '\bLNG\b', '\bLPG\b', 'gas carriers?', '\bIGC\b', 'chemical carriers?']}
+    offshore:  {title: ['\boffshore\b', '\bOSVs?\b', '\bMODUs?\b', 'dynamic positioning', '\bDPO\b']}
+    passenger: {title: ['passenger (ships?|vessels?)', '\bcruise', '\bferr(y|ies)\b', 'ro-?pax']}
+    fishing:   {title: ['fishing (vessels?|boats?)', '\bfishermen\b']}
+    dredger:   {title: ['\bdredg(er|ers|ing)\b', 'dredge (mate|master|driver)']}
+    ncv:       {title: ['\bNCV\b', 'near[- ]coastal', 'coastal (vessels?|ships?)', 'inland vessels?', 'river[- ]sea']}
+    bulk:      {title: ['bulk carriers?']}
+    container: {title: ['container (ships?|vessels?)']}
+  mmd:
+    # Body text always contains the Mumbai HQ address, so body matches need the word MMD next to the city.
+    mumbai:        {title: ['(?<!DGMA )(?<!DGS )(?<!navi )(?<!navi-)\bmumbai\b'],                  body: ['MMD[\s,.–-]*mumbai', 'mumbai[\s,.–-]*MMD']}
+    kolkata:       {title: ['\bkolkata\b', '\bcalcutta\b'], body: ['MMD[\s,.–-]*kolkata', 'kolkata[\s,.–-]*MMD']}
+    chennai:       {title: ['\bchennai\b'],                 body: ['MMD[\s,.–-]*chennai', 'chennai[\s,.–-]*MMD']}
+    kochi:         {title: ['\bkochi\b', '\bcochin\b'],     body: ['MMD[\s,.–-]*(kochi|cochin)', '(kochi|cochin)[\s,.–-]*MMD']}
+    kandla:        {title: ['\bkandla\b', '\bdeendayal\b'], body: ['MMD[\s,.–-]*kandla', 'kandla[\s,.–-]*MMD']}
+    noida:         {title: ['\bnoida\b', '\bdelhi\b'],      body: ['MMD[\s,.–-]*noida', 'noida[\s,.–-]*MMD']}
+    goa:           {title: ['\bgoa\b', 'mormugao'],         body: ['MMD[\s,.–-]*goa', 'goa[\s,.–-]*MMD']}
+    tuticorin:     {title: ['\btuticorin\b', 'thoothukudi'], body: ['MMD[\s,.–-]*(tuticorin|thoothukudi)']}
+    visakhapatnam: {title: ['visakhapatnam', '\bvizag\b'],  body: ['MMD[\s,.–-]*visakhapatnam', 'visakhapatnam[\s,.–-]*MMD']}
+    port_blair:    {title: ['port blair'],                  body: ['MMD[\s,.–-]*port blair']}
+    jamnagar:      {title: ['\bjamnagar\b'],                body: ['MMD[\s,.–-]*jamnagar', 'jamnagar[\s,.–-]*MMD']}
+    haldia:        {title: ['\bhaldia\b'],                  body: ['MMD[\s,.–-]*haldia']}
+    paradip:       {title: ['\bparadip\b'],                 body: ['MMD[\s,.–-]*paradip']}
+    mangalore:     {title: ['\bmangalore\b', 'mangaluru'],  body: ['MMD[\s,.–-]*(mangalore|mangaluru)']}
+  exam_grade:
+    second_mate: {title: ['\b(second|2nd) mate', '\b2M\b', '\bNWKO\b', '\bOICNW\b']}
+    chief_mate:  {title: ['\b(chief|first|1st) mate']}
+    master:      {title: ['\bmaster\b.{0,5}\b(FG|foreign going)', '\bmaster\W?s? (exam|examination|CoC)']}
+    eto:         {title: ['\bETOs?\b', 'electro[- ]?technical officer']}
+    gmdss:       {title: ['\bGMDSS\b', '\bGOC\b', 'radio operator']}
+    ncv:         {title: ['\bNCV\b']}
+    signal:      {title: ['signal (exam|notice)']}
+    dredge:      {title: ['dredge (mate|master|driver)']}
+    # meo_class_1..4 are extracted in code (titles like "MEO Class I / Class II" list several classes).
+  topic:
+    exams:        {title: ['\bexam', 'seat booking', '\bresults?\b']}
+    training:     {title: ['\btraining\b', '\bcourses?\b', '\bMTIs?\b', '\binstitutes?\b', 'syllabus', 'preparatory']}
+    revalidation: {title: ['revalidat', '\brenewal\b', 'validity', 'extension of']}
+    sea_service:  {title: ['sea[- ](service|time)', 'sea-going service']}
+    e_portal:     {title: ['e-?samu?n?dra', 'e-?navik', '\bportal\b', '\bonline\b', '\bmodule\b']}
+    security:     {title: ['security', 'piracy', 'armed robbery', 'high risk area', 'conflict', '\bwar\b', 'attack', 'red sea', 'hormuz', 'gulf of aden']}
+    welfare:      {title: ['welfare', 'grievance', '\bwages?\b', 'repatriat', 'abandon', '\bMLC\b', 'insurance', '\bSWFS\b', '\bSPFO\b', 'provident fund']}
+    rpsl:         {title: ['\bRPSL?\b', 'recruitment and placement', 'manning agenc', 'recruitment agenc']}
+    medical:      {title: ['\bmedical\b']}
+    coc_dispatch: {title: ['dispatch list', 'speed post']}
+    fraud:        {title: ['\bfraud', '\bfake\b', '\bscam', '\bbogus\b', 'impersonat']}
+    immigration:  {title: ['immigration', 'sign[- ]?on', 'sign[- ]?off', '\bvisas?\b']}

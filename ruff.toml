@@ -1,0 +1,16 @@
+line-length = 120
+target-version = "py312"
+extend-exclude = ["backend/migrations/versions"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["SIM108"]
+
+[lint.isort]
+known-first-party = ["sa_backend", "sa_scraper"]
+
+[lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Query", "fastapi.Depends", "fastapi.Header"]
+
+[format]
+quote-style = "double"

@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+data/
+*.egg-info/
+build/
+dist/
+# Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins*

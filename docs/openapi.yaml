@@ -1,0 +1,499 @@
+openapi: 3.1.0
+info:
+  title: Seafarer Compliance Assistant API
+  version: 0.1.0-phase0
+  description: |
+    Contract draft for Phase 0 review. FastAPI will generate the live spec from code in Phase 1;
+    this file is the agreed target. All times are ISO-8601 with an offset; date-only fields are IST calendar dates.
+    Independent app, not affiliated with DGMA / DG Shipping.
+servers:
+  - url: https://api.example.invalid/v1
+security:
+  - bearer: []
+
+tags:
+  - {name: auth}
+  - {name: me}
+  - {name: feed}
+  - {name: documents}
+  - {name: certificates}
+  - {name: sea-service}
+  - {name: exams}
+  - {name: checks}
+  - {name: ask}
+  - {name: billing}
+  - {name: admin}
+
+paths:
+  /auth/email/start:
+    post:
+      tags: [auth]
+      security: []
+      summary: Send a magic link / 6-digit code to an email address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [email], properties: {email: {type: string, format: email}}}
+      responses: {'202': {description: Sent}, '429': {$ref: '#/components/responses/RateLimited'}}
+  /auth/phone/start:
+    post:
+      tags: [auth]
+      security: []
+      summary: Send an SMS OTP (only when the SMS provider is enabled; see decision D4)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [phone], properties: {phone: {type: string, pattern: '^\+[1-9][0-9]{7,14}$'}}}
+      responses: {'202': {description: Sent}, '429': {$ref: '#/components/responses/RateLimited'}}
+  /auth/verify:
+    post:
+      tags: [auth]
+      security: []
+      summary: Exchange a code or magic-link token for access + refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [identifier, code]
+              properties:
+                identifier: {type: string}
+                code: {type: string}
+                consents: {type: array, items: {$ref: '#/components/schemas/Consent'}}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Tokens'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /auth/refresh:
+    post:
+      tags: [auth]
+      security: []
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [refresh_token], properties: {refresh_token: {type: string}}}}}}
+      responses: {'200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Tokens'}}}}}
+
+  /me:
+    get:
+      tags: [me]
+      responses: {'200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Profile'}}}}}
+    patch:
+      tags: [me]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ProfileUpdate'}}}}
+      responses: {'200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/Profile'}}}}}
+    delete:
+      tags: [me]
+      summary: Delete account and all server-side data (hard delete within 24 h)
+      responses: {'202': {description: Scheduled}}
+  /me/export:
+    get:
+      tags: [me]
+      summary: Export all server-side user data (DPDP)
+      responses: {'200': {description: ZIP of JSON files, content: {application/zip: {}}}}
+  /me/topics:
+    put:
+      tags: [me]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: array, items: {type: object, required: [topic, mode], properties: {topic: {type: string}, mode: {enum: [follow, mute]}}}}
+      responses: {'204': {description: Saved}}
+  /me/consents:
+    post:
+      tags: [me]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Consent'}}}}
+      responses: {'204': {description: Recorded}}
+  /me/devices:
+    post:
+      tags: [me]
+      summary: Register / refresh a device (FCM token optional; Windows has none)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [platform], properties: {platform: {enum: [windows, android, ios]}, fcm_token: {type: string}, app_version: {type: string}}}
+      responses: {'200': {description: OK, content: {application/json: {schema: {type: object, properties: {device_id: {type: string, format: uuid}}}}}}}
+
+  /feed:
+    get:
+      tags: [feed]
+      summary: Alerts that match the user, newest first (cursor-paginated). Windows polls this.
+      parameters:
+        - {name: since, in: query, schema: {type: string}, description: opaque cursor}
+        - {name: limit, in: query, schema: {type: integer, default: 30, maximum: 100}}
+        - {$ref: '#/components/parameters/Lang'}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: {type: array, items: {$ref: '#/components/schemas/FeedItem'}}
+                  next_cursor: {type: string}
+  /feed/{alert_id}/read:
+    post:
+      tags: [feed]
+      parameters: [{name: alert_id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'204': {description: Marked read}}
+
+  /documents:
+    get:
+      tags: [documents]
+      summary: Archive search (Postgres full-text search plus filters)
+      parameters:
+        - {name: q, in: query, schema: {type: string}}
+        - {name: doc_type, in: query, schema: {$ref: '#/components/schemas/DocType'}}
+        - {name: department, in: query, schema: {type: string}}
+        - {name: from, in: query, schema: {type: string, format: date}}
+        - {name: to, in: query, schema: {type: string, format: date}}
+        - {name: page, in: query, schema: {type: integer, default: 1}}
+        - {$ref: '#/components/parameters/Lang'}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: '#/components/schemas/DocumentCard'}}, total: {type: integer}}}}}}
+  /documents/{id}:
+    get:
+      tags: [documents]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {$ref: '#/components/parameters/Lang'}
+      responses:
+        '200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/DocumentDetail'}}}}
+        '402': {$ref: '#/components/responses/PremiumRequired'}
+  /documents/{id}/pdf:
+    get:
+      tags: [documents]
+      summary: Redirect to the cached PDF copy (falls back to the official URL)
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'302': {description: Redirect}}
+
+  /sync/changes:
+    get:
+      tags: [certificates]
+      summary: Pull changed rows (certificates, sea_service, alerts, summaries) since a cursor
+      parameters: [{name: since, in: query, schema: {type: string}}]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  certificates: {type: array, items: {$ref: '#/components/schemas/Certificate'}}
+                  sea_service: {type: array, items: {$ref: '#/components/schemas/SeaService'}}
+                  cursor: {type: string}
+  /sync/push:
+    post:
+      tags: [certificates]
+      summary: Push the local outbox; each row carries its base version. The server returns conflicts and does not overwrite them.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                certificates: {type: array, items: {$ref: '#/components/schemas/Certificate'}}
+                sea_service: {type: array, items: {$ref: '#/components/schemas/SeaService'}}
+      responses:
+        '200':
+          description: Applied
+          content:
+            application/json:
+              schema: {type: object, properties: {applied: {type: array, items: {type: string, format: uuid}}, conflicts: {type: array, items: {type: object, properties: {id: {type: string, format: uuid}, server: {type: object}}}}}}
+
+  /certificates/{id}/linked-documents:
+    get:
+      tags: [certificates]
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: OK, content: {application/json: {schema: {type: array, items: {type: object, properties: {document: {$ref: '#/components/schemas/DocumentCard'}, reason: {type: string}}}}}}}}
+
+  /sea-service/summary:
+    get:
+      tags: [sea-service]
+      summary: Total sea time and NRI-day counts per Indian financial year (informational)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_days: {type: integer}
+                  by_ship_type: {type: object, additionalProperties: {type: integer}}
+                  financial_years:
+                    type: array
+                    items: {type: object, properties: {fy: {type: string, example: '2026-27'}, days_outside_india: {type: integer}, threshold_days: {type: integer}, days_remaining: {type: integer}, rule_note: {type: string}}}
+
+  /exams/events:
+    get:
+      tags: [exams]
+      parameters:
+        - {name: grade, in: query, schema: {type: string}}
+        - {name: mmd, in: query, schema: {type: string}}
+      responses: {'200': {description: OK, content: {application/json: {schema: {type: array, items: {$ref: '#/components/schemas/ExamEvent'}}}}}}
+
+  /checks/vessel:
+    get:
+      tags: [checks]
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string}, description: vessel name or 7-digit IMO}
+      responses: {'200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CheckResult'}}}}}
+  /checks/rpsl:
+    get:
+      tags: [checks]
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string}, description: agency name or RPSL licence number}
+      responses: {'200': {description: OK, content: {application/json: {schema: {$ref: '#/components/schemas/CheckResult'}}}}}
+
+  /ask:
+    post:
+      tags: [ask]
+      summary: Question answering over the circulars, with citations (premium)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [question], properties: {question: {type: string, maxLength: 1000}, lang: {$ref: '#/components/schemas/Lang'}}}
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  answer: {type: string}
+                  answered_from_sources: {type: boolean, description: false means the model declined because the sources do not cover the question}
+                  citations: {type: array, items: {type: object, properties: {document_id: {type: string, format: uuid}, circular_number: {type: string}, title: {type: string}, page: {type: integer}, pdf_url: {type: string}}}}
+                  disclaimer: {type: string}
+        '402': {$ref: '#/components/responses/PremiumRequired'}
+
+  /billing/razorpay/order:
+    post:
+      tags: [billing]
+      requestBody: {required: true, content: {application/json: {schema: {type: object, required: [plan], properties: {plan: {enum: [premium_monthly, premium_yearly]}}}}}}
+      responses: {'200': {description: Razorpay subscription id, content: {application/json: {schema: {type: object, properties: {subscription_id: {type: string}, key_id: {type: string}}}}}}}
+  /billing/webhooks/{provider}:
+    post:
+      tags: [billing]
+      security: []
+      summary: Signature-verified webhooks (razorpay, play RTDN, App Store Server Notifications v2)
+      parameters: [{name: provider, in: path, required: true, schema: {enum: [razorpay, play, appstore]}}]
+      responses: {'200': {description: OK}}
+  /billing/entitlements:
+    get:
+      tags: [billing]
+      responses: {'200': {description: OK, content: {application/json: {schema: {type: object, properties: {plan: {type: string}, features: {type: object, additionalProperties: {type: boolean}}}}}}}}
+
+  /admin/sources:
+    get:
+      tags: [admin]
+      security: [{adminSession: []}]
+      summary: Scraper health (last run, item counts, errors, structure drift)
+      responses: {'200': {description: OK}}
+  /admin/sources/{id}/run:
+    post:
+      tags: [admin]
+      security: [{adminSession: []}]
+      parameters: [{name: id, in: path, required: true, schema: {type: string}}]
+      responses: {'202': {description: Queued}}
+  /admin/documents:
+    get:
+      tags: [admin]
+      security: [{adminSession: []}]
+      parameters: [{name: status, in: query, schema: {enum: [new, extracted, processed, needs_review, failed]}}]
+      responses: {'200': {description: OK}}
+  /admin/documents/{id}/summary/{lang}:
+    put:
+      tags: [admin]
+      security: [{adminSession: []}]
+      summary: Edit a summary (audit-logged)
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+        - {name: lang, in: path, required: true, schema: {$ref: '#/components/schemas/Lang'}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Summary'}}}}
+      responses: {'200': {description: OK}}
+  /admin/documents/{id}/approve:
+    post:
+      tags: [admin]
+      security: [{adminSession: []}]
+      summary: Mark the summary human-verified and release a held document for matching/broadcast
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses: {'200': {description: OK}}
+  /admin/broadcasts:
+    post:
+      tags: [admin]
+      security: [{adminSession: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object, required: [title, body, priority], properties: {title: {type: string}, body: {type: string}, priority: {$ref: '#/components/schemas/Priority'}, audience: {$ref: '#/components/schemas/AffectedGroups'}, document_id: {type: string, format: uuid}}}
+      responses: {'202': {description: Queued}}
+  /admin/stats:
+    get:
+      tags: [admin]
+      security: [{adminSession: []}]
+      responses: {'200': {description: Aggregate counts only (no PII)}}
+
+  /healthz:
+    get:
+      security: []
+      responses: {'200': {description: Liveness}}
+  /readyz:
+    get:
+      security: []
+      responses: {'200': {description: DB + Redis reachable}, '503': {description: Not ready}}
+
+components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer, bearerFormat: JWT}
+    adminSession: {type: apiKey, in: cookie, name: admin_session}
+  parameters:
+    Lang: {name: lang, in: query, schema: {$ref: '#/components/schemas/Lang'}}
+  responses:
+    Unauthorized: {description: Invalid or expired credentials}
+    RateLimited: {description: Too many requests}
+    PremiumRequired:
+      description: Feature needs Premium
+      content: {application/json: {schema: {type: object, properties: {feature: {type: string}, upgrade_url: {type: string}}}}}
+  schemas:
+    Lang: {type: string, enum: [en, hi, mr, ta, ml, bn, te, gu]}
+    DocType: {type: string, enum: [circular, order, notice, exam_schedule, result, advisory, rules, unknown]}
+    Priority: {type: string, enum: [critical, normal, low]}
+    Tokens:
+      type: object
+      properties: {access_token: {type: string}, refresh_token: {type: string}, expires_in: {type: integer}}
+    Consent:
+      type: object
+      required: [purpose, granted, policy_version]
+      properties: {purpose: {type: string}, granted: {type: boolean}, policy_version: {type: string}}
+    Profile:
+      allOf:
+        - $ref: '#/components/schemas/ProfileUpdate'
+        - type: object
+          properties:
+            id: {type: string, format: uuid}
+            email: {type: string}
+            phone: {type: string}
+            plan: {type: string}
+    ProfileUpdate:
+      type: object
+      properties:
+        name: {type: string}
+        preferred_language: {$ref: '#/components/schemas/Lang'}
+        rank: {type: string}
+        department: {enum: [deck, engine, electrical, catering, other]}
+        level: {enum: [officer, rating, cadet]}
+        ship_types: {type: array, items: {type: string}}
+        home_mmd: {type: string}
+        exam_grades: {type: array, items: {type: string}}
+        alert_channels: {type: array, items: {enum: [in_app, push, whatsapp, sms, email]}}
+        quiet_hours: {type: object, properties: {start: {type: string, example: '22:00'}, end: {type: string, example: '07:00'}}}
+    AffectedGroups:
+      type: object
+      properties:
+        departments: {type: array, items: {type: string}}
+        levels: {type: array, items: {type: string}}
+        ranks: {type: array, items: {type: string}}
+        ship_types: {type: array, items: {type: string}}
+        mmds: {type: array, items: {type: string}}
+        cert_types: {type: array, items: {type: string}}
+    Summary:
+      type: object
+      description: Kept under 5 KB when serialised
+      properties:
+        language: {$ref: '#/components/schemas/Lang'}
+        summary_short: {type: string, maxLength: 400}
+        summary_detailed: {type: string, maxLength: 3000}
+        action_required: {type: boolean}
+        action_deadline: {type: [string, 'null'], format: date}
+        affected_groups: {$ref: '#/components/schemas/AffectedGroups'}
+        key_points: {type: array, items: {type: string}, maxItems: 8}
+        uncertain_fields: {type: array, items: {type: string}}
+        model_version: {type: string}
+        verified_by_human: {type: boolean}
+        disclaimer: {type: string, const: 'AI summary — always verify with the official circular.'}
+    DocumentCard:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        circular_number: {type: [string, 'null']}
+        issuing_branch: {type: [string, 'null']}
+        published_date: {type: [string, 'null'], format: date}
+        doc_type: {$ref: '#/components/schemas/DocType'}
+        priority: {$ref: '#/components/schemas/Priority'}
+        summary_short: {type: string}
+    DocumentDetail:
+      allOf:
+        - $ref: '#/components/schemas/DocumentCard'
+        - type: object
+          properties:
+            summary: {$ref: '#/components/schemas/Summary'}
+            pdf_url: {type: string, description: official dgma.gov.in URL}
+            source_url: {type: string}
+            related: {type: array, items: {type: object, properties: {document_id: {type: string, format: uuid}, relation: {type: string}}}}
+            your_impact: {type: array, items: {type: object, properties: {certificate_id: {type: string, format: uuid}, reason: {type: string}}}}
+    FeedItem:
+      type: object
+      properties:
+        alert_id: {type: string, format: uuid}
+        kind: {enum: [new_document, cert_impact, cert_expiry, exam, broadcast]}
+        priority: {$ref: '#/components/schemas/Priority'}
+        created_at: {type: string, format: date-time}
+        read: {type: boolean}
+        document: {$ref: '#/components/schemas/DocumentCard'}
+        reason: {type: string, description: 'e.g. "Matches: Engine · Officer · MMD Mumbai"'}
+    Certificate:
+      type: object
+      required: [id, type, version, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        type: {enum: [coc, cop, stcw_basic, stcw_advanced, medical, cdc, passport, bsid, visa, other]}
+        subtype: {type: string}
+        number: {type: string}
+        issuing_authority: {type: string}
+        issue_date: {type: [string, 'null'], format: date}
+        expiry_date: {type: [string, 'null'], format: date}
+        version: {type: integer}
+        updated_at: {type: string, format: date-time}
+        deleted_at: {type: [string, 'null'], format: date-time}
+    SeaService:
+      type: object
+      required: [id, vessel_name, sign_on, version, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        vessel_name: {type: string}
+        imo: {type: string, pattern: '^[0-9]{7}$'}
+        rank: {type: string}
+        sign_on: {type: string, format: date}
+        sign_off: {type: [string, 'null'], format: date}
+        ship_type: {type: string}
+        flag: {type: string}
+        version: {type: integer}
+        updated_at: {type: string, format: date-time}
+        deleted_at: {type: [string, 'null'], format: date-time}
+    ExamEvent:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        kind: {enum: [seat_booking_open, seat_booking_close, exam_date, result, coc_dispatch]}
+        grade: {type: string}
+        mmd: {type: string}
+        starts_at: {type: string, format: date-time}
+        ends_at: {type: [string, 'null'], format: date-time}
+        document_id: {type: string, format: uuid}
+    CheckResult:
+      type: object
+      properties:
+        status: {enum: [listed_banned, listed_restricted, listed_valid, listed_suspended, not_found]}
+        matches: {type: array, items: {type: object, properties: {name: {type: string}, imo: {type: string}, licence_no: {type: string}, list: {type: string}, similarity: {type: number}}}}
+        source_url: {type: string}
+        list_last_updated: {type: string, format: date}
+        note: {type: string, description: '"Not found" does not mean safe. Verify with DGMA.'}

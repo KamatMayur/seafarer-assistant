@@ -1,0 +1,108 @@
+# Scraper sources for dgma.gov.in (public pages only; verified 06-Oct-2026).
+#
+# How to add a source: copy an entry, give it a unique id, point `url` at a public listing page, and pick a
+# `layout` from the `layouts:` section at the bottom (or add a new layout if the table looks different).
+# Run `sa-scraper check-source <id>` to see what it parses before enabling it.
+#
+# Placeholders in url: {year} = current year (IST). With `backfill_years: N` the previous N years are also
+# fetched by `sa-scraper scrape --backfill`.
+#
+# hints.doc_type / hints.priority / hints.topics are applied before the title rules (rules can still override).
+# text_policy: metadata_only  -> never download or store the PDF text (lists containing personal data, e.g.
+#                                exam results and CoC dispatch lists contain candidates' names).
+
+defaults:
+  base_url: https://dgma.gov.in
+  poll_minutes: 180
+  layout: year_list
+
+sources:
+  - id: dgma_latest_news
+    url: /latest-news
+    layout: latest_news
+    poll_minutes: 120
+
+  - id: yl_dgs_circulars
+    url: /year-list?type=DGS+Circulars&year={year}&rows=100
+    hints: {doc_type: circular}
+
+  - id: yl_dgs_orders
+    url: /year-list?type=DGS+Orders&year={year}&rows=100
+    hints: {doc_type: order}
+
+  - id: yl_ms_notices
+    url: /year-list?type=MS+Notices&year={year}&rows=100
+    hints: {doc_type: notice}
+
+  - id: yl_advisory
+    url: /year-list?type=Advisory&year={year}&rows=100
+    hints: {doc_type: advisory, topics: [security]}
+
+  - id: yl_exam_notices
+    url: /year-list?type=Exam+Schedule+and+Notices&year={year}&rows=100
+    hints: {doc_type: exam_schedule, topics: [exams]}
+
+  - id: yl_exam_results
+    url: /year-list?type=Exam+Results&year={year}&rows=100
+    hints: {doc_type: result, topics: [exams]}
+    text_policy: metadata_only
+
+  - id: yl_coc_dispatch
+    url: /year-list?type=COC+Dispatch+List&year={year}&rows=100
+    hints: {doc_type: notice, topics: [coc_dispatch]}
+    text_policy: metadata_only
+
+  - id: yl_mmd_notices
+    url: /year-list?type=MMD+Circular%2FNotice%2FOrder&year={year}&rows=100
+    hints: {doc_type: notice, topics: [mmd]}
+
+  - id: yl_acts_rules
+    url: /year-list?type=Acts+%26+Rules&year={year}&rows=100
+    hints: {doc_type: rules}
+    poll_minutes: 360
+
+  - id: nw_piracy
+    url: /nautical-wing/nw-circulars/nautical-piracy
+    layout: inner_table
+    hints: {doc_type: advisory, priority: critical, topics: [security, piracy]}
+    poll_minutes: 240
+
+  - id: nw_isps_security
+    url: /nautical-wing/nw-circulars/nautical-isps-maritime-security
+    layout: inner_table
+    hints: {topics: [security]}
+    poll_minutes: 240
+
+  - id: training_circulars
+    url: /training-branch/training-branch-dgma-training-circular
+    layout: inner_table
+    hints: {topics: [training]}
+    poll_minutes: 360
+
+layouts:
+  # Wide table used by /latest-news and /year-list.
+  year_list: &wide
+    table: "table.data-table"
+    columns:                      # header text (case/space-insensitive, startswith) -> field
+      number: ["No of Year", "No. of Year"]
+      title: ["Title"]
+      branch: ["Wing/Branch"]
+      date: ["Publish Date", "Issue Date"]
+      site_type: ["Type"]
+      link: ["Download"]
+    required: [title, date, link]
+    skip_row_if_cells_lt: 3        # year group header rows have a single colspan cell
+    date_format: "%d-%b-%Y"
+    pagination: {param: page, max_pages: 5}
+  latest_news: *wide
+  # Narrow table used by wing/branch pages.
+  inner_table:
+    table: "table#inner_page_table"
+    columns:
+      number: ["No. of Year", "No of Year"]
+      title: ["Title"]
+      date: ["Issue Date", "Publish Date"]
+      link: ["Download", "Downloadd"]
+    required: [title, date, link]
+    skip_row_if_cells_lt: 3
+    date_format: "%d-%b-%Y"
