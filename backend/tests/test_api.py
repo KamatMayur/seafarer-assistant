@@ -232,3 +232,17 @@ def test_meta_and_admin(client):
     assert client.get("/v1/admin/status", headers={"Authorization": "Bearer test-admin-token"}).status_code == 200
     assert client.get("/healthz").json() == {"status": "ok"}
     assert client.get("/readyz").status_code == 200
+
+
+def test_prod_refuses_default_jwt_secret(monkeypatch):
+    from sa_backend.settings import get_settings
+
+    monkeypatch.setenv("SA_ENV", "prod")
+    monkeypatch.setenv("SA_JWT_SECRET", "dev-only-change-me")
+    get_settings.cache_clear()
+    with pytest.raises(RuntimeError):
+        get_settings()
+    monkeypatch.setenv("SA_JWT_SECRET", "x" * 48)
+    get_settings.cache_clear()
+    assert get_settings().env == "prod"
+    get_settings.cache_clear()

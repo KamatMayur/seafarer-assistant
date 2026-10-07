@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.circular_number or "Document" }}{% endblock %}
+{% block body %}
+<p><a href="/admin/review">← Review queue</a> · <a href="/admin/documents">All documents</a></p>
+<h1>{{ doc.title }}</h1>
+{% if msg %}<p class="flash">{{ msg }}</p>{% endif %}
+
+<div class="panel">
+  <div class="row muted">
+    <div>Status <b>{{ doc.status.replace("_", " ") }}</b></div>
+    <div>Published {{ doc.published_date.strftime("%d %b %Y") if doc.published_date else "—" }}</div>
+    <div>Number {{ doc.circular_number or "—" }}</div>
+    <div>Confidence {{ "%.2f"|format(doc.classify_confidence) if doc.classify_confidence is not none else "—" }}</div>
+    <div>Alerts {{ alert_count }}</div>
+  </div>
+  <p class="muted">Source <code>{{ doc.source_id }}</code>{% if doc.site_type %} · listed as “{{ doc.site_type }}”{% endif %}
+    {% if doc.issuing_branch %} · {{ doc.issuing_branch }}{% endif %}
+    · text: {{ doc.text_policy }}{% if doc.extraction_method %} ({{ doc.extraction_method }}{% if doc.text_quality is not none %}, quality {{ "%.2f"|format(doc.text_quality) }}{% endif %}){% endif %}
+    · <a href="{{ doc.pdf_url }}" rel="noreferrer" target="_blank">official PDF ↗</a></p>
+  {% if audience %}<p class="muted">Classifier reasons: {{ audience.evidence }}</p>{% endif %}
+  {% if doc.last_error %}<p class="err">Last error: {{ doc.last_error }}</p>{% endif %}
+</div>
+
+<form method="post" action="/admin/documents/{{ doc.id }}" class="panel">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <h2 style="margin-top:0">Classification</h2>
+  <div class="row">
+    <div><label for="doc_type">Document type</label><select id="doc_type" name="doc_type">
+      {% for t in doc_types %}<option {{ "selected" if t == doc.doc_type }}>{{ t }}</option>{% endfor %}</select></div>
+    <div><label for="priority">Priority</label><select id="priority" name="priority">
+      {% for p in priorities %}<option {{ "selected" if p == doc.priority }}>{{ p }}</option>{% endfor %}</select></div>
+    <div><label for="audience">Audience</label><select id="audience" name="audience">
+      {% for k, label in audiences.items() %}<option value="{{ k }}" {{ "selected" if audience and audience.value == k }}>{{ label }}</option>{% endfor %}</select></div>
+  </div>
+
+  <h2>Who it concerns <span class="muted">(title-strength tags: these restrict who is alerted)</span></h2>
+  {% for kind, values in editable.items() %}
+    <label>{{ kind.replace("_", " ") }}</label>
+    <div class="checks">
+      {% for v, text in values.items() %}
+        <label><input type="checkbox" name="tag" value="{{ kind }}:{{ v }}" {{ "checked" if (kind, v) in title_tags }}> {{ text }}</label>
+      {% endfor %}
+    </div>
+  {% endfor %}
+  {% if body_tags %}
+    <p class="muted">Mentioned only in the body (not used for targeting):
+      {% for t in body_tags %}<span class="pill" title="{{ t.evidence or '' }}">{{ t.kind }}:{{ t.value }}</span> {% endfor %}</p>
+  {% endif %}
+
+  <h2>Summary (English)</h2>
+  {% if summary %}<p class="muted">Method: {{ summary.method }} · {{ summary.model_version }}{% if summary.verified_by_human %} · <span class="ok">human verified</span>{% endif %}
+    {% if summary.uncertain_fields %} · <span class="warn">uncertain: {{ summary.uncertain_fields|join(", ") }}</span>{% endif %}</p>{% endif %}
+  <label for="summary_short">Short summary (shown on the card)</label>
+  <textarea id="summary_short" name="summary_short" required>{{ summary.summary_short if summary else "" }}</textarea>
+  <label for="summary_detailed">Detailed summary</label>
+  <textarea id="summary_detailed" name="summary_detailed" style="min-height:8rem">{{ summary.summary_detailed or "" if summary else "" }}</textarea>
+  <label for="key_points">Key points (one per line)</label>
+  <textarea id="key_points" name="key_points">{{ summary.key_points|join("\n") if summary else "" }}</textarea>
+  <div class="row">
+    <div><label><input type="checkbox" name="action_required" {{ "checked" if summary and summary.action_required }}> Action required</label></div>
+    <div><label for="action_deadline">Action deadline</label>
+      <input id="action_deadline" type="date" name="action_deadline" value="{{ summary.action_deadline.isoformat() if summary and summary.action_deadline else "" }}"></div>
+  </div>
+  <p class="muted">Saving marks the summary as human-verified, so later reprocessing will not overwrite it.
+    {% if doc.status == "processed" %}Alerts already sent are not resent after edits.{% endif %}</p>
+  <p class="row" style="justify-content:flex-start">
+    <button type="submit" name="action" value="save" style="flex:0 0 auto">Save</button>
+    {% if doc.status != "processed" %}
+      <button type="submit" name="action" value="approve" class="primary" style="flex:0 0 auto">Save &amp; approve (send alerts)</button>
+      <button type="submit" name="action" value="publish" style="flex:0 0 auto">Publish without alerts</button>
+    {% endif %}
+  </p>
+</form>
+
+{% if doc.raw_text %}
+<div class="panel"><h2 style="margin-top:0">Extracted text <span class="muted">({{ doc.page_count or "?" }} pages)</span></h2>
+<pre>{{ doc.raw_text }}</pre></div>
+{% endif %}
+{% endblock %}

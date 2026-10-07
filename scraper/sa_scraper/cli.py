@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import func, select
 
-from sa_backend.db.models import AdminEvent, Document, Source
+from sa_backend.db.models import AdminEvent, Document, DocumentSummary, Source
 from sa_backend.db.session import make_sessionmaker, session_scope
 from sa_backend.services.notify import deliver_due
 from sa_backend.services.reminders import create_expiry_alerts
@@ -60,12 +60,18 @@ def cmd_process(args: argparse.Namespace) -> None:
 
 
 def cmd_reprocess(args: argparse.Namespace) -> None:
-    """Re-run classification/summaries (no download) after rule changes. Alerts stay idempotent."""
+    """Re-run classification/summaries (no download) after rule changes. Alerts stay idempotent.
+    Documents an admin has reviewed (human-verified summary) are skipped so their edits are not undone."""
     statuses = args.status.split(",")
+    reviewed = select(DocumentSummary.document_id).where(DocumentSummary.verified_by_human)
     with session_scope() as s:
         n = s.execute(
             Document.__table__.update()
-            .where(Document.status.in_(statuses), Document.raw_text.is_not(None) | (Document.text_policy != "full"))
+            .where(
+                Document.status.in_(statuses),
+                Document.raw_text.is_not(None) | (Document.text_policy != "full"),
+                Document.id.not_in(reviewed),
+            )
             .values(status="extracted", attempts=0)
         ).rowcount
     print(f"{n} documents queued for re-classification")

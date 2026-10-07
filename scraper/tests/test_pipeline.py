@@ -223,3 +223,30 @@ def test_failing_pdf_is_retried_then_marked_failed(db, site, configs):
         doc = s.scalar(select(Document))
         assert doc.status == "failed" and doc.attempts == 5 and "404" in doc.last_error
         assert s.scalar(select(func.count()).select_from(AdminEvent).where(AdminEvent.severity == "error")) >= 1
+
+
+def test_reprocess_skips_admin_reviewed_documents(db, site, configs, capsys):
+    import argparse
+
+    from sa_scraper.cli import cmd_reprocess
+
+    scrape(db, site, configs)
+    with site.client() as client:
+        process_pending(db, client, configs)
+    with db() as s:
+        doc = s.scalar(select(Document))
+        doc.doc_type = "order"  # an admin's correction
+        s.get(DocumentSummary, (doc.id, "en")).verified_by_human = True
+        s.commit()
+
+    cmd_reprocess(argparse.Namespace(status="processed,needs_review", limit=10))
+    assert "0 documents queued" in capsys.readouterr().out
+    with db() as s:
+        assert s.scalar(select(Document.doc_type)) == "order"
+        s.execute(DocumentSummary.__table__.update().values(verified_by_human=False))
+        s.commit()
+
+    cmd_reprocess(argparse.Namespace(status="processed,needs_review", limit=10))
+    assert "1 documents queued" in capsys.readouterr().out
+    with db() as s:
+        assert s.scalar(select(Document.doc_type)) == "circular"

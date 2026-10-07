@@ -1,0 +1,9 @@
+<tr id="event-{{ e.id }}">
+  <td class="muted">{{ e.created_at.strftime("%d %b %H:%M") }}</td>
+  <td class="{{ e.severity }}">{{ e.severity }}</td>
+  <td>{{ e.source_id or "" }}</td>
+  <td>{{ e.message }}</td>
+  <td>{% if e.acknowledged_at %}<span class="muted">acknowledged</span>{% else %}
+    <button hx-post="/admin/events/{{ e.id }}/ack" hx-target="#event-{{ e.id }}" hx-swap="outerHTML">Acknowledge</button>
+  {% endif %}</td>
+</tr>

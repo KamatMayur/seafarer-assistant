@@ -70,8 +70,13 @@ def quiet_until(user: User, now: datetime) -> datetime | None:
 
 
 def _insert_alert(session: Session, **values) -> bool:
-    stmt = insert(Alert).values(id=uuid.uuid4(), **values).on_conflict_do_nothing(constraint="alerts_dedupe")
-    return session.execute(stmt).rowcount > 0
+    stmt = (
+        insert(Alert)
+        .values(id=uuid.uuid4(), **values)
+        .on_conflict_do_nothing(constraint="alerts_dedupe")
+        .returning(Alert.id)  # rowcount is not reliable for INSERT on SQLAlchemy 2.1
+    )
+    return session.execute(stmt).first() is not None
 
 
 def create_document_alerts(session: Session, doc: Document, now: datetime | None = None) -> int:

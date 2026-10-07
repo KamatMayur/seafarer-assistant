@@ -17,6 +17,17 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | P10 | Worker crash mid-pipeline, job retried | No duplicate alerts (dedupe key) | | ☐ |
 | P11 | Rate limiting | ≥ 5 s between requests to dgma.gov.in, verified in logs | | ☐ |
 
+## Admin UI (Phase 1)
+| # | Case | Expected | Auto |
+|---|---|---|---|
+| A1 | Any /admin page without a session | Redirect to /admin/login; wrong token → 401, audit-logged | test_admin_ui::test_pages_need_login |
+| A2 | Admin token rotated | All existing admin sessions invalid | test_rotating_admin_token_ends_sessions |
+| A3 | POST without CSRF token | 403, nothing changed | test_review_save_then_approve_sends_alerts |
+| A4 | Save edits on a held document | Stays held; summary `human`/verified; tags replaced; no alerts | test_review_save_then_approve_sends_alerts |
+| A5 | Approve | Status processed; alerts only to matching users; audit row | test_review_save_then_approve_sends_alerts |
+| A6 | Publish without alerts | Status processed; zero alerts | test_publish_without_alerts_and_unchecking_tags |
+| A7 | `sa-scraper reprocess` after admin review | Reviewed documents skipped (tags/summary kept) | test_pipeline::test_reprocess_skips_admin_reviewed_documents |
+
 ## Matching
 | # | Case | Expected |
 |---|---|---|

@@ -48,3 +48,18 @@ def test_quiet_hours_use_ist_even_for_utc_input():
 
 def test_no_quiet_hours():
     assert quiet_until(_user(None, None), datetime(2026, 10, 6, 23, 0, tzinfo=IST)) is None
+
+
+def test_create_expiry_alerts_counts_and_is_idempotent(db):
+    from sa_backend.db.models import Certificate, User
+    from sa_backend.services.reminders import create_expiry_alerts
+
+    today = date(2026, 10, 7)
+    with db() as s:
+        user = User(email="cert@example.com")
+        s.add(user)
+        s.flush()
+        s.add(Certificate(id=uuid.uuid4(), user_id=user.id, type="medical", expiry_date=date(2026, 11, 6)))  # 30 days
+        s.commit()
+        assert create_expiry_alerts(s, today=today) == 1
+        assert create_expiry_alerts(s, today=today) == 0

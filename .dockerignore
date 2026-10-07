@@ -1,0 +1,12 @@
+.git
+.venv
+data
+**/__pycache__
+**/*.egg-info
+.pytest_cache
+.ruff_cache
+.env
+infra/.env.prod
+scraper/tests
+backend/tests
+app

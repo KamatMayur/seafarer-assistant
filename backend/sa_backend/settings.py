@@ -52,4 +52,7 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    s = Settings()
+    if s.env != "dev" and (s.jwt_secret == "dev-only-change-me" or len(s.jwt_secret) < 32):
+        raise RuntimeError("SA_JWT_SECRET must be set to a long random value outside dev")
+    return s

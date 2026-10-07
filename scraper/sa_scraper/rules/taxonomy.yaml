@@ -72,7 +72,7 @@ relations:
 tags:
   department:
     engine:     {title: ['\bMEO\b', 'marine engineer', '\bengine (room|cadet|rating|department|watch)', 'engineering (wing|branch|candidates|exam|cadet)', '\bTEAP\b', '(steam|motor) endorsement', '\bGME\b', 'graduate marine engineering', '\bwipers?\b', 'motorman', '\bfitters?\b']}
-    deck:       {title: ['\bnautical (grade|exam|candidates?|cadets?)', '\bmasters?\b(?! ?(plan|data|list))', '\b(second|2nd|first|1st|chief) mate', '\bmates?\b', '\bNWKO\b', 'navigational watch', '\bdeck\b', '\bGMDSS\b', 'signal (exam|notice)', '\bDNS\b', 'B\.?\s?Sc\.?\s*nautical', 'dredge (mate|master)', '\bskippers?\b', 'able seafarer deck', '(?-i:\bAB\b)']}
+    deck:       {title: ['\bnautical (grade|exam|candidates?|cadets?)', 'dispatch list of nautical', '\bmasters?\b(?! ?(plan|data|list))', '\b(second|2nd|first|1st|chief) mate', '\bmates?\b', '\bNWKO\b', 'navigational watch', '\bdeck\b', '\bGMDSS\b', 'signal (exam|notice)', '\bDNS\b', 'B\.?\s?Sc\.?\s*nautical', 'dredge (mate|master)', '\bskippers?\b', 'able seafarer deck', '(?-i:\bAB\b)']}
     electrical: {title: ['\bETOs?\b', 'electro[- ]?technical', '\bETRs?\b']}
     catering:   {title: ['\bcooks?\b', '\bcatering\b', '\bstewards?\b', '\bgalley\b', '\bchefs?\b', '\bsaloon\b']}
   level:

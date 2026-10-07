@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>{% block title %}Admin{% endblock %} · seafarer_assistant</title>
+<script src="/admin/static/htmx.min.js"></script>
+<style>
+  :root { --bg:#f7f7f5; --panel:#fff; --fg:#1d1d1b; --muted:#6b6b66; --line:#e2e2dc; --accent:#1f5fa8;
+          --ok:#2e7d32; --warn:#b26a00; --err:#b3261e; --chip:#eef2f7; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#151614; --panel:#1e1f1d; --fg:#e8e8e3; --muted:#a0a09a; --line:#33342f; --accent:#7fb0ea;
+            --ok:#81c784; --warn:#ffb74d; --err:#ef9a9a; --chip:#2a3038; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.5 system-ui, "Segoe UI", sans-serif; }
+  header { display:flex; gap:1.25rem; align-items:center; padding:.75rem 1rem; background:var(--panel);
+           border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header strong { margin-right:auto; }
+  header a { color:var(--fg); text-decoration:none; }
+  header a:hover, a { color:var(--accent); }
+  main { max-width:1100px; margin:0 auto; padding:1rem; }
+  h1 { font-size:1.35rem; margin:.5rem 0 1rem; } h2 { font-size:1.05rem; margin:1.5rem 0 .5rem; }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border:1px solid var(--line); }
+  th, td { text-align:left; padding:.45rem .6rem; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { font-size:.8rem; text-transform:uppercase; letter-spacing:.03em; color:var(--muted); }
+  .muted { color:var(--muted); font-size:.875rem; }
+  .pill { display:inline-block; padding:0 .5rem; border-radius:999px; font-size:.8rem; background:var(--chip); }
+  .ok { color:var(--ok); } .warning, .warn { color:var(--warn); } .error, .err { color:var(--err); }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:1rem; margin-bottom:1rem; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:.75rem; margin-bottom:1rem; }
+  .stats div { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:.6rem .8rem; }
+  .stats b { display:block; font-size:1.4rem; }
+  label { display:block; font-weight:600; margin:.75rem 0 .25rem; }
+  input[type=text], input[type=password], input[type=date], input[type=search], select, textarea {
+    width:100%; padding:.45rem .55rem; border:1px solid var(--line); border-radius:6px; background:var(--bg);
+    color:var(--fg); font:inherit; }
+  textarea { min-height:5rem; }
+  button { font:inherit; padding:.45rem .9rem; border-radius:6px; border:1px solid var(--line);
+           background:var(--panel); color:var(--fg); cursor:pointer; }
+  button.primary { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .row { display:flex; gap:.75rem; flex-wrap:wrap; align-items:end; }
+  .row > * { flex:1 1 180px; }
+  .checks { display:flex; flex-wrap:wrap; gap:.25rem .9rem; }
+  .checks label { font-weight:normal; margin:0; display:inline-flex; gap:.3rem; align-items:center; }
+  .flash { padding:.6rem .8rem; border-radius:6px; background:var(--chip); margin-bottom:1rem; }
+  pre { white-space:pre-wrap; max-height:28rem; overflow:auto; background:var(--bg); padding:.75rem;
+        border:1px solid var(--line); border-radius:6px; font-size:.85rem; }
+  footer { color:var(--muted); font-size:.8rem; text-align:center; padding:2rem 1rem; }
+  .table-wrap { overflow-x:auto; }
+</style>
+</head>
+<body hx-headers='{"X-CSRF-Token": "{{ csrf }}"}'>
+{% if csrf %}
+<header>
+  <strong>seafarer_assistant admin</strong>
+  <a href="/admin">Dashboard</a>
+  <a href="/admin/review">Review queue</a>
+  <a href="/admin/documents">Documents</a>
+  <a href="/admin/audit">Audit log</a>
+  <form method="post" action="/admin/logout" style="margin:0">
+    <input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Log out</button>
+  </form>
+</header>
+{% endif %}
+<main>{% block body %}{% endblock %}</main>
+<footer>{{ unofficial }}</footer>
+</body>
+</html>

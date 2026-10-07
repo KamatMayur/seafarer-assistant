@@ -66,6 +66,7 @@ def create_expiry_alerts(session: Session, today: date | None = None) -> int:
                 sent_at=now,
             )
             .on_conflict_do_nothing(constraint="alerts_dedupe")
+            .returning(Alert.id)  # rowcount is not reliable for INSERT on SQLAlchemy 2.1
         )
-        created += session.execute(stmt).rowcount
+        created += session.execute(stmt).first() is not None
     return created

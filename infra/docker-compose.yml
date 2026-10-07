@@ -1,0 +1,83 @@
+# Deployment stack: Postgres 16 (+pgvector), one-shot migrations, API, scraper worker, Caddy (automatic HTTPS).
+# Local development does not need this (see docs/HANDOFF.md). Usage, from the repo root:
+#   cp infra/.env.prod.example infra/.env.prod   # fill it in
+#   docker compose -f infra/docker-compose.yml --env-file infra/.env.prod up -d --build
+name: seafarer-assistant
+
+x-app: &app
+  build:
+    context: ..
+    dockerfile: infra/Dockerfile
+  image: seafarer-assistant:latest
+  restart: unless-stopped
+  env_file: .env.prod
+  environment:
+    SA_DATABASE_URL: postgresql+psycopg://seafarer:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/seafarer
+    SA_DATA_DIR: /data
+  volumes:
+    - appdata:/data
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: seafarer
+      POSTGRES_DB: seafarer
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U seafarer -d seafarer"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Not published on the host: only the app containers can reach it.
+
+  migrate:
+    <<: *app
+    restart: "no"
+    working_dir: /app/backend
+    command: ["alembic", "upgrade", "head"]
+
+  api:
+    <<: *app
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    <<: *app
+    command: ["sa-scraper", "worker", "--interval-min", "10"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SA_DOMAIN: ${SA_DOMAIN:?set SA_DOMAIN (or localhost)}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  appdata:
+  caddy_data:
+  caddy_config:

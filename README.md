@@ -5,7 +5,7 @@ An independent assistant for Indian merchant navy seafarers. It watches public D
 > **Not affiliated with DGMA, DG Shipping or the Government of India.** Always verify with the official circular.
 
 ## Status
-**Phase 0 — Plan (awaiting review).** Start with [docs/decisions.md](docs/decisions.md). It lists the deviations from the spec and the questions that block Phase 1.
+**Phase 1 — backend pipeline + admin UI done; checkpoint review pending.** See [docs/HANDOFF.md](docs/HANDOFF.md) for current state. [docs/decisions.md](docs/decisions.md) lists the binding decisions (R1–R6) and remaining open questions.
 
 | Document | Contents |
 |---|---|

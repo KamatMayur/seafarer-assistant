@@ -14,3 +14,4 @@ dist/
 app/.dart_tool/
 app/build/
 app/.flutter-plugins*
+infra/.env.prod

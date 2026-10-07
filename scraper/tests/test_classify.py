@@ -149,3 +149,16 @@ def test_unknown_doc_types_are_held_for_review():
     assert c.doc_type == "unknown" and c.confidence < threshold
     # a known type with a clear audience is released
     assert classify("Guidelines for ETO Preparatory Course", site_type="DGS Circulars").confidence >= threshold
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["COC Dispatch List of Nautical Wing of Dated 05.10.2026", "COC Dispatch List of Nautical of Dated 21.09.2026"],
+)
+def test_nautical_dispatch_lists_are_deck_only(title):
+    assert tags(classify(title, site_type="COC Dispatch List"), "department") == {"deck"}
+
+
+def test_nautical_wing_as_issuer_does_not_make_a_circular_deck_only():
+    c = classify("Accidental Release of Free-fall Lifeboat (FFLB) at Sea", branch="Nautical Wing")
+    assert "deck" not in tags(c, "department")

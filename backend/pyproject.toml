@@ -15,6 +15,8 @@ dependencies = [
   "pyjwt>=2.8",
   "httpx>=0.27",
   "structlog>=24",
+  "jinja2>=3.1",
+  "python-multipart>=0.0.9",
 ]
 
 [project.optional-dependencies]
@@ -26,3 +28,6 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["sa_backend*"]
+
+[tool.setuptools.package-data]
+sa_backend = ["admin/templates/*.html", "admin/static/*"]

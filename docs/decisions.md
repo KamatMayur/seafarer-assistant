@@ -1,20 +1,28 @@
 # Decisions, deviations and open questions (Phase 0 checkpoint)
 
+## Resolved with the owner (06-Oct-2026) — binding, supersedes the items marked below
+- **R1. No LLM / no Anthropic API key (supersedes D2 Anthropic row, D6 embeddings-for-now, D11, and the LLM parts of the hallucination guard).** Classification and tagging are rules-based (`scraper/sa_scraper/rules/taxonomy.yaml`). Summaries are *extractive*: they quote the PDF and never generate text, so there is nothing to hallucinate. An LLM can be plugged in later via `SA_ANTHROPIC_API_KEY` as an optional upgrade. Translation (Phase 3) uses IndicTrans2 run locally. Q&A (Phase 3) is cited passage search with no generated answer.
+- **R2. No Redis/arq (supersedes D7).** The worker is a plain loop (`sa-scraper worker`) and Postgres row status is the queue. This keeps local dev Docker-free. Redis can be added later if needed.
+- **R3. Name, login, hosting, money (answers open questions 1, 2, 3, 5; D1).** Placeholder `seafarer_assistant` ("DG Alerts" rejected). Email login only. Run locally. Monetisation off.
+- **R4. Local Postgres without Docker (answers D0 for Phase 1).** `infra/dev/localpg.py` (pgserver: PostgreSQL 16 + pgvector). Docker compose is kept for deployment only.
+- **R5. Classifier hold threshold** is 0.65 (not 0.7). Only *title*-strength tags restrict who is alerted. Body-text tags are "mentions". Critical advisories are never held.
+- **R6. Privacy and backfill.** Exam results, CoC dispatch lists and other candidate lists are `metadata_only`: their PDFs are never downloaded because they contain names. Documents older than 183 days are `archived`. Alerts only go out for documents published in the last 30 days.
+
 Status key: **NEEDS YOU** = blocked on your answer · **PROPOSED** = I will proceed this way unless you object · **FYI** = constraint, no choice needed.
 
 ## Blocking issues
 
-### D0. Local toolchain — NEEDS YOU
+### D0. Local toolchain — Phase 1 resolved by R4; Flutter still NEEDS YOU for Phase 2
 On 06-Oct-2026 this machine has Python 3.12, Git and Node. It does **not** have:
 - **Flutter SDK**, plus **Visual Studio 2022 with "Desktop development with C++"**, which a Flutter Windows build needs. Required for Phase 2.
 - **Docker Desktop** (needs WSL2). Required for Phase 1 Postgres + pgvector + Redis. The alternative is a native PostgreSQL 16 + pgvector and Memurai/Redis install. Docker is strongly preferred.
 
 Phase 1 cannot run end to end until Docker (or native Postgres) is installed. I can write and unit-test the scraper and parsers without it.
 
-### D1. Product name — NEEDS YOU
+### D1. Product name — placeholder chosen (R3); final name still open
 §10 of the spec says the branding must not imply a DGMA/DG Shipping product. **"DG Alerts" conflicts with that**: "DG" is how seafarers refer to the Directorate itself. App stores also reject names that suggest a government affiliation. Proposed alternatives (no trademark search done): **Shipshape Alerts**, **SeaBrief**, **CircularWatch**, **BerthNote**. Until you choose, the code uses the placeholder package id `seafarer_assistant`.
 
-### D2. Paid services to approve — NEEDS YOU
+### D2. Paid services to approve — NEEDS YOU (Anthropic row: superseded by R1)
 | Service | Needed for | When | Cost driver |
 |---|---|---|---|
 | Anthropic API | summaries, tagging, translation, Q&A | Phase 1 | Roughly 30–60 documents a month × 8 languages, which is low. Q&A scales with users. |
@@ -37,10 +45,10 @@ FlutterFire's Windows desktop support is not production-grade. Instead, the back
 ### D5. Certificate files stay on the device by default — PROPOSED
 This follows DPDP minimisation and reduces breach impact. Only certificate **metadata** (type, subtype, number, dates) syncs to the server, which is enough for circular↔certificate matching and push reminders. Images are encrypted on the device with AES-256-GCM, and the key is held in the OS secure store. An optional *encrypted cloud backup* (zero-knowledge: the key is derived from a user passphrase) can be added later as a premium feature. **Trade-off:** if users lose the device without a backup, they lose the images. The metadata survives.
 
-### D6. Embeddings: local multilingual model instead of a paid API — PROPOSED
+### D6. Embeddings: local multilingual model instead of a paid API — DEFERRED to Phase 3 (R1)
 Anthropic has no embeddings endpoint. Instead of adding another paid vendor, the worker runs **BAAI/bge-m3** (multilingual, 1024-dim) on the VM. It covers English and the Indic scripts, so a question in Hindi can retrieve English circulars. Cost: ~2 GB RAM and slower indexing. With ~1–2k documents, that is fine.
 
-### D7. Job queue: arq (async, Redis) instead of Celery — PROPOSED
+### D7. Job queue: arq (async, Redis) instead of Celery — SUPERSEDED by R2
 The scraper and API are async (httpx, FastAPI). arq gives cron scheduling, retries and job-ID dedupe with much less setup than Celery, and Celery does not officially support Windows dev hosts. Redis stays, as the spec requires.
 
 ### D8. Windows notifications: tray poller + local toasts — PROPOSED
@@ -52,7 +60,7 @@ It is built into Windows 10/11 and needs no 30+ MB of bundled language data. Ser
 ### D10. Admin UI: server-rendered (Jinja2 + HTMX) inside the backend — PROPOSED
 It is one deployable, Python only, and needs no separate SPA build. `/admin` in the monorepo holds the templates and static files.
 
-### D11. Model choice — PROPOSED
+### D11. Model choice — SUPERSEDED by R1
 The model is set by env var (`CLAUDE_MODEL_SUMMARY`, `CLAUDE_MODEL_CLASSIFY`). The default is a Sonnet-class model for summaries and Q&A and Haiku for classification and translation. All calls use JSON-schema structured output, and `model_version` is stored on every summary.
 
 ## Accuracy and safety rules (decided)

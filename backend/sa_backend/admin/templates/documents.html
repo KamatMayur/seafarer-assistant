@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}{{ "Review queue" if status == "needs_review" else "Documents" }}{% endblock %}
+{% block body %}
+<h1>{{ "Review queue" if status == "needs_review" else "Documents" }} <span class="muted">({{ total }})</span></h1>
+{% if status == "needs_review" %}
+  <p class="muted">These documents had low classifier confidence and have not alerted anyone. Check the tags, fix the summary,
+  then approve (alerts go out) or publish without alerts.</p>
+{% endif %}
+<form method="get" action="/admin/documents" class="row panel">
+  <div><label for="q">Title or number</label><input id="q" type="search" name="q" value="{{ q }}"></div>
+  <div><label for="status">Status</label>
+    <select id="status" name="status"><option value="">any</option>
+      {% for s in statuses %}<option value="{{ s }}" {{ "selected" if s == status }}>{{ s }}</option>{% endfor %}
+    </select></div>
+  <div style="flex:0 0 auto"><button type="submit">Filter</button></div>
+</form>
+<div class="table-wrap"><table>
+  <tr><th>Published</th><th>Title</th><th>Type</th><th>Status</th><th>Conf.</th></tr>
+  {% for d in docs %}
+  <tr>
+    <td class="muted" style="white-space:nowrap">{{ d.published_date.strftime("%d %b %Y") if d.published_date else "—" }}</td>
+    <td><a href="/admin/documents/{{ d.id }}">{{ d.title }}</a>
+      {% if d.circular_number %}<div class="muted">{{ d.circular_number }}</div>{% endif %}</td>
+    <td>{{ d.doc_type }}{% if d.priority == "critical" %} <span class="pill err">critical</span>{% endif %}</td>
+    <td>{{ d.status.replace("_", " ") }}</td>
+    <td>{{ "%.2f"|format(d.classify_confidence) if d.classify_confidence is not none else "" }}</td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="muted">Nothing here.</td></tr>{% endfor %}
+</table></div>
+{% if pages > 1 %}
+<p class="row" style="justify-content:space-between">
+  <span>{% if page > 1 %}<a href="?status={{ status }}&q={{ q|urlencode }}&page={{ page - 1 }}">← newer</a>{% endif %}</span>
+  <span class="muted" style="text-align:center">page {{ page }} of {{ pages }}</span>
+  <span style="text-align:right">{% if page < pages %}<a href="?status={{ status }}&q={{ q|urlencode }}&page={{ page + 1 }}">older →</a>{% endif %}</span>
+</p>
+{% endif %}
+{% endblock %}

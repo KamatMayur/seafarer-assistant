@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Audit log{% endblock %}
+{% block body %}
+<h1>Audit log <span class="muted">(latest 200)</span></h1>
+<div class="table-wrap"><table>
+  <tr><th>When</th><th>Action</th><th>Target</th><th>Change</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td class="muted" style="white-space:nowrap">{{ r.at.strftime("%d %b %H:%M") }}</td>
+    <td>{{ r.action }}</td>
+    <td>{% if r.target and r.action in ("save", "approve", "publish") %}<a href="/admin/documents/{{ r.target }}">{{ r.target[:8] }}…</a>{% else %}{{ r.target or "" }}{% endif %}</td>
+    <td class="muted">{{ r.diff | tojson if r.diff else "" }}</td>
+  </tr>
+  {% else %}<tr><td colspan="4" class="muted">Nothing yet.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}
