@@ -3,6 +3,7 @@
 Usage:  python infra/dev/localpg.py            -> prints the SA_DATABASE_URL to use
 Data lives in ./data/pg (git-ignored). The server keeps running after this script exits.
 """
+
 import sys
 from pathlib import Path
 

@@ -101,3 +101,15 @@ def test_ship_type_filter():
 def test_empty_profile_gets_general_seafarer_circulars():
     m = match(doc(), user())
     assert m is not None and m.reason == "For all seafarers"
+
+
+def test_coc_dispatch_lists_are_opt_in_and_never_cert_impacts():
+    cert_id = uuid.uuid4()
+    d = doc(doc_type="notice", departments={"engine"}, cert_types={"coc"}, topics={"coc_dispatch"})
+    holder = user(department="engine", level="officer", certificates=((cert_id, "coc"),))
+    assert match(d, holder) is None  # not followed: nothing, not even a cert impact
+    follower = user(department="engine", followed_topics={"coc_dispatch"}, certificates=((cert_id, "coc"),))
+    m = match(d, follower)
+    assert m is not None and m.cert_impacts == []
+    deck_follower = user(department="deck", followed_topics={"coc_dispatch"})
+    assert match(d, deck_follower) is None  # profile filters still apply

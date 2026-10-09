@@ -175,8 +175,12 @@ def classify(
     tags: list[Tag] = []
     for kind, values in rules.tags.items():
         for value, matcher in values.items():
-            if hit := _first(matcher.title, head):
+            if hit := _first(matcher.title, title):
                 tags.append(Tag(kind, value, "title", hit))
+            elif branch and (hit := _first(matcher.title, branch)):
+                # The issuing branch says who wrote it, not who it is for ("Engineering Wing" also issues
+                # general safety circulars), so it never restricts the audience.
+                tags.append(Tag(kind, value, "body", f"branch: {hit}"))
             elif body:
                 n, sample = _count(matcher.body, body)
                 if n >= rules.min_body_hits and sample:
@@ -205,14 +209,15 @@ def classify(
         audience = "seafarers"
         reasons.append(f"seafarer indicator '{hit}'")
         confidence += 0.2
+    elif hit := _first(rules.industry, title):
+        # A clear industry title ("Quarterly Tonnage Statement") beats seafarer words in the body text.
+        audience = "industry"
+        reasons.append(f"industry indicator '{hit}'")
+        confidence += 0.2
     elif body and _count(rules.seafarer, body)[0] >= 3:
         audience = "seafarers"
         reasons.append("seafarer indicators in body")
         confidence += 0.1
-    elif hit := _first(rules.industry, head):
-        audience = "industry"
-        reasons.append(f"industry indicator '{hit}'")
-        confidence += 0.2
     else:
         audience = "general"
         reasons.append("no audience indicator")

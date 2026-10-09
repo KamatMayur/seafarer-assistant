@@ -250,3 +250,25 @@ def test_reprocess_skips_admin_reviewed_documents(db, site, configs, capsys):
     assert "1 documents queued" in capsys.readouterr().out
     with db() as s:
         assert s.scalar(select(Document.doc_type)) == "circular"
+
+
+def test_reprocess_includes_documents_without_text(db, site, configs, capsys):
+    """Scanned PDFs have no text layer; they must still be re-classified (from the title) after rule changes."""
+    import argparse
+
+    from sa_scraper.cli import cmd_reprocess
+
+    scrape(db, site, configs)
+    with site.client() as client:
+        process_pending(db, client, configs)
+    with db() as s:
+        doc = s.scalar(select(Document))
+        doc.raw_text = None  # as for a scan
+        s.query(DocumentTag).filter(DocumentTag.kind == "department").delete()  # stale classification
+        s.commit()
+    cmd_reprocess(argparse.Namespace(status="processed,needs_review", limit=10))
+    assert "1 documents queued" in capsys.readouterr().out
+    with db() as s:
+        depts = s.scalars(select(DocumentTag.value).where(DocumentTag.kind == "department")).all()
+        assert depts == ["engine"]
+    assert "/download/c65.pdf" in site.requests and site.requests.count("/download/c65.pdf") == 1  # no re-download

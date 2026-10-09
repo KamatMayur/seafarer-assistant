@@ -59,6 +59,7 @@
   <a href="/admin/review">Review queue</a>
   <a href="/admin/documents">Documents</a>
   <a href="/admin/audit">Audit log</a>
+  {% if admin %}<span class="muted">{{ admin.email }}</span>{% endif %}
   <form method="post" action="/admin/logout" style="margin:0">
     <input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Log out</button>
   </form>

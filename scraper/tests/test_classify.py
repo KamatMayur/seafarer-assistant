@@ -162,3 +162,35 @@ def test_nautical_dispatch_lists_are_deck_only(title):
 def test_nautical_wing_as_issuer_does_not_make_a_circular_deck_only():
     c = classify("Accidental Release of Free-fall Lifeboat (FFLB) at Sea", branch="Nautical Wing")
     assert "deck" not in tags(c, "department")
+
+
+def test_issuing_branch_never_restricts_the_audience():
+    # Real case: a general safety circular issued by the Engineering Wing must not become engine-only.
+    c = classify(
+        "Accidental Release of Free-fall Lifeboat (FFLB) at Sea", branch="Engineering Wing", site_type="DGS Circulars"
+    )
+    assert "engine" not in c.values("department")
+    assert "engine" in c.values("department", strength="body")  # kept as a mention
+
+
+def test_competency_exam_notices_are_for_officers():
+    c = classify("Commencement of Seat Booking for Nautical Grade Competency Examinations – September 2026")
+    assert c.values("level") == {"officer"}
+
+
+def test_industry_title_beats_seafarer_words_in_body():
+    body = "tanker crew seafarers officers ratings tanker offshore bulk carrier seafarers crew"
+    c = classify("Quarterly Tonnage Statement for 30 September 2026", body=body, circular_number="66 of 2026")
+    assert c.audience == "industry"
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Extension of Seat Booking for Nautical Grade Oral Examinations – October 2026",
+        "GMDSS Exam Results Chennai Center for September 2026",
+        "Signal Examination Notice for the month of October, 2026 (Examination centre-MMD Chennai)",
+    ],
+)
+def test_officer_only_exam_notices(title):
+    assert classify(title).values("level") == {"officer"}

@@ -8,11 +8,18 @@
 - **R5. Classifier hold threshold** is 0.65 (not 0.7). Only *title*-strength tags restrict who is alerted. Body-text tags are "mentions". Critical advisories are never held.
 - **R6. Privacy and backfill.** Exam results, CoC dispatch lists and other candidate lists are `metadata_only`: their PDFs are never downloaded because they contain names. Documents older than 183 days are `archived`. Alerts only go out for documents published in the last 30 days.
 
+## Phase 1 checkpoint findings — resolved 09-Oct-2026 (owner asked to complete Phase 1 with sensible defaults; change any of these if you disagree)
+- **R7. CoC dispatch lists are opt-in.** Topic `coc_dispatch` must be followed to get them (profile filters still apply), and they never create a `cert_impact` alert. Reason: about 3 a week per wing, useful only to someone waiting for a CoC.
+- **R8. The issuing branch never restricts the audience.** Tags matched only in the branch ("Engineering Wing") are stored as mentions (`strength=body`, evidence `branch: …`). Reason: the Engineering Wing also issues general safety circulars, which were reaching engineers only.
+- **R9. Competency-exam notices are for officers** (`competency examination`, `grade competency` → level officer), so ratings stop receiving nautical CoC seat-booking notices.
+- **R10. The feed groups a document's `new_document` and `cert_impact` alerts into one card.** Implemented in the app (Phase 2), not the API.
+- **R11. Per-admin accounts** (email + scrypt password + TOTP authenticator code, lockout after 5 failures for 15 min) replace the shared token. `SA_ADMIN_TOKEN` only works until the first account exists (bootstrap/dev). Manage with `python -m sa_backend.admin.manage`. TOTP secrets are encrypted with a key derived from `SA_JWT_SECRET`; rotating that secret means re-enrolling admins (`manage reset-totp`).
+
 Status key: **NEEDS YOU** = blocked on your answer · **PROPOSED** = I will proceed this way unless you object · **FYI** = constraint, no choice needed.
 
 ## Blocking issues
 
-### D0. Local toolchain — Phase 1 resolved by R4; Flutter still NEEDS YOU for Phase 2
+### D0. Local toolchain — RESOLVED (09-Oct-2026): Flutter SDK in `D:\tools\flutter`, VS 2022 Build Tools in `D:\tools\VS2022BuildTools` (owner: install on D only)
 On 06-Oct-2026 this machine has Python 3.12, Git and Node. It does **not** have:
 - **Flutter SDK**, plus **Visual Studio 2022 with "Desktop development with C++"**, which a Flutter Windows build needs. Required for Phase 2.
 - **Docker Desktop** (needs WSL2). Required for Phase 1 Postgres + pgvector + Redis. The alternative is a native PostgreSQL 16 + pgvector and Memurai/Redis install. Docker is strongly preferred.

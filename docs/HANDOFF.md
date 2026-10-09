@@ -38,10 +38,19 @@ Read this first when continuing on a new machine. Spec: the original build promp
 4. Feed UI should group the new_document + cert_impact pair for the same document into one card.
 
 
+## Session 3 (09-Oct-2026): Phase 1 completed
+- Checkpoint findings 1–4 resolved as decisions R7–R10 (`docs/decisions.md`): dispatch lists opt-in with no cert_impact; issuing branch never restricts the audience; competency/GMDSS/signal exam notices are officer-only; feed cards group per document (done in the app).
+- Further fixes found by reading the real demo feeds: an industry title ("Quarterly Tonnage Statement") now beats seafarer words in the body; followed/muted topics use title tags only (no "You follow: Exams" on a lifeboat circular).
+- **Bug fixed:** `sa-scraper reprocess` skipped documents without a text layer (22 scans kept stale tags). Regression test added.
+- **R11 per-admin accounts:** email + scrypt password + TOTP, 5-failure lockout, sessions end on password reset/disable, audit log records the admin's email. `python -m sa_backend.admin.manage create you@example.com --role owner`. Migration `0002`. The shared `SA_ADMIN_TOKEN` only works until the first account exists.
+- Demo on real data (last 30 days): deck officer Mumbai 15 alerts, engine officer Kolkata 12, AB rating Chennai 9, ETO cadet Kochi 5.
+- Tests: 128 passing; ruff clean.
+- Not done: Docker compose smoke test (Docker is not installed; Docker Desktop installs mostly on C:, owner wants D: only).
+
 ## Remaining
-- **Phase 1 checkpoint review** by the owner: run `demo_profiles.py`, look through `/admin/review`.
+- Owner review of the Phase 1 decisions R7–R11 (defaults applied; change any you disagree with).
 - Build and smoke-test `infra/docker-compose.yml` on a machine with Docker.
-- Per-admin accounts + TOTP for the admin UI (architecture §5); today it is one shared admin token.
+
 - **Phase 2 (Windows Flutter app): not started.** It needs the Flutter SDK and Visual Studio 2022 Build Tools ("Desktop development with C++"). Screens: `docs/screens.md`. API: `/v1/*` (the generated OpenAPI is at `/docs` when the API runs).
 - Phases 3–6 as in the spec. Phase 3 adds IndicTrans2 translation, RPSL/vessel lists, sea time/NRI, PDF export, OCR scan and cited search.
 

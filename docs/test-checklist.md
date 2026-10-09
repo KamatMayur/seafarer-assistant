@@ -27,6 +27,11 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | A5 | Approve | Status processed; alerts only to matching users; audit row | test_review_save_then_approve_sends_alerts |
 | A6 | Publish without alerts | Status processed; zero alerts | test_publish_without_alerts_and_unchecking_tags |
 | A7 | `sa-scraper reprocess` after admin review | Reviewed documents skipped (tags/summary kept) | test_pipeline::test_reprocess_skips_admin_reviewed_documents |
+| A8 | First admin account created | Shared token stops working; token sessions end | test_admin_accounts::test_token_login_stops_once_an_account_exists |
+| A9 | Wrong password / code / unknown email | Same generic error; failed attempt audit-logged | test_any_wrong_factor_fails_with_same_message |
+| A10 | 5 failed logins | Account locked 15 min, even with correct factors | test_lockout_after_repeated_failures |
+| A11 | Password reset or account disabled | That admin's sessions end immediately | test_disable_and_password_reset_end_sessions |
+| A12 | Same TOTP code used twice | Second use rejected (replay) | test_totp_rejects_replay_and_old_codes |
 
 ## Matching
 | # | Case | Expected |

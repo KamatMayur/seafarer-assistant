@@ -98,6 +98,12 @@ def match(doc: DocFacts, user: UserFacts) -> Match | None:
     if muted and not followed:
         return None
 
+    # CoC dispatch lists come out several times a week and only matter to someone waiting for a CoC.
+    # They are opt-in: users follow the 'coc_dispatch' topic (profile filters still apply below).
+    is_dispatch = "coc_dispatch" in doc.topics
+    if is_dispatch and "coc_dispatch" not in user.followed_topics:
+        return None
+
     if doc.audience in ("industry", "general") and not followed and not cert_hits:
         return None  # in the archive, not pushed; users can follow these topics
 
@@ -146,7 +152,7 @@ def match(doc: DocFacts, user: UserFacts) -> Match | None:
             "Check whether it changes anything for you, and verify with DGMA or your MMD.",
         )
         for cert_id, ctype in user.certificates
-        if ctype in cert_hits
+        if ctype in cert_hits and not is_dispatch  # a dispatch list does not change anyone's certificate
     ]
     kind = "exam" if doc.doc_type in ("exam_schedule", "result") else "new_document"
     priority = "low" if doc.priority == "low" else "normal"

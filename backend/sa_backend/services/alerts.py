@@ -37,7 +37,7 @@ def doc_facts(doc: Document) -> DocFacts:
         mmds=title_values("mmd"),
         exam_grades=title_values("exam_grade"),
         cert_types=title_values("certificate_type"),
-        topics=frozenset(t.value for t in doc.tags if t.kind == "topic"),
+        topics=title_values("topic"),  # body mentions never count as a followed/muted topic
     )
 
 

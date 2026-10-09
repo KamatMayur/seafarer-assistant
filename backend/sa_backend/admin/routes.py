@@ -39,7 +39,6 @@ router = APIRouter(prefix="/admin", include_in_schema=False)
 Session_ = Annotated[str, Depends(auth.require_session)]
 Csrf = Depends(auth.require_csrf)
 PAGE_SIZE = 50
-ADMIN = "admin-token"  # single shared admin identity until per-admin accounts + TOTP (Phase 3)
 
 # Title-strength tags an admin may set. 'rank' is not produced by the classifier, 'audience' has its own field.
 EDITABLE_TAGS: dict[str, dict[str, str]] = {
@@ -60,32 +59,68 @@ AUDIENCES = {
 
 
 def _render(request: Request, name: str, sid: str | None, **ctx) -> HTMLResponse:
-    ctx |= {"csrf": auth.csrf_for(sid) if sid else "", "unofficial": reference.UNOFFICIAL}
+    ctx |= {
+        "csrf": auth.csrf_for(sid) if sid else "",
+        "unofficial": reference.UNOFFICIAL,
+        "admin": getattr(request.state, "admin", None),
+    }
     return templates.TemplateResponse(request, name, ctx)
 
 
-def _audit(db: Session, action: str, target: str, diff: dict | None = None) -> None:
-    db.add(AdminAuditLog(admin=ADMIN, action=action, target=target, diff=diff))
+def _audit(
+    request: Request, db: Session, action: str, target: str | None, diff: dict | None = None, who: str | None = None
+) -> None:
+    ident = getattr(request.state, "admin", None)
+    admin = who or (ident.email if ident else "anonymous")
+    db.add(AdminAuditLog(admin=admin, action=action, target=target, diff=diff))
 
 
 # ---------------------------------------------------------------- login
 @router.get("/login", response_class=HTMLResponse)
-def login_page(request: Request) -> HTMLResponse:
-    return _render(request, "login.html", None, error=None, configured=bool(get_settings().admin_token))
+def login_page(request: Request, db: DB) -> HTMLResponse:
+    return _login_form(request, db, None)
+
+
+def _login_form(request: Request, db: Session, error: str | None, status_code: int = 200) -> HTMLResponse:
+    accounts = auth.accounts_exist(db)
+    resp = _render(
+        request,
+        "login.html",
+        None,
+        error=error,
+        accounts=accounts,
+        configured=accounts or bool(get_settings().admin_token),
+    )
+    resp.status_code = status_code
+    return resp
 
 
 @router.post("/login")
-def login(request: Request, db: DB, token: Annotated[str, Form()] = "") -> Response:
-    if not auth.token_matches(token):
-        _audit(db, "login_failed", request.client.host if request.client else None)
-        resp = _render(request, "login.html", None, error="Wrong admin token.", configured=True)
-        resp.status_code = 401
-        return resp
-    _audit(db, "login", None)
+def login(
+    request: Request,
+    db: DB,
+    token: Annotated[str, Form()] = "",
+    email: Annotated[str, Form()] = "",
+    password: Annotated[str, Form()] = "",
+    code: Annotated[str, Form()] = "",
+) -> Response:
+    ip = request.client.host if request.client else None
+    acct = None
+    if auth.accounts_exist(db):
+        try:
+            acct = auth.authenticate(db, email, password, code)
+        except auth.LoginError as e:
+            _audit(request, db, "login_failed", ip, {"email": email.strip().lower()[:320]}, who="anonymous")
+            db.commit()  # keep the failed-attempt counter even though we return an error page
+            return _login_form(request, db, str(e), 401)
+    elif not auth.token_matches(token):
+        _audit(request, db, "login_failed", ip, who="anonymous")
+        return _login_form(request, db, "Wrong admin token.", 401)
+    _audit(request, db, "login", ip, who=acct.email if acct else auth.TOKEN_ADMIN)
     resp = RedirectResponse("/admin", status_code=303)
     resp.set_cookie(
         auth.COOKIE,
-        auth.new_session(),
+        auth.new_session(acct),
         max_age=auth.SESSION_HOURS * 3600,
         httponly=True,
         samesite="strict",
@@ -132,7 +167,7 @@ def ack_event(event_id: int, request: Request, db: DB, sid: Session_) -> HTMLRes
         raise HTTPException(404)
     if ev.acknowledged_at is None:
         ev.acknowledged_at = datetime.now(UTC)
-        _audit(db, "ack_event", str(event_id))
+        _audit(request, db, "ack_event", str(event_id))
     return _render(request, "_event_row.html", sid, e=ev)
 
 
@@ -298,7 +333,7 @@ async def save_document(request: Request, doc_id: uuid.UUID, db: DB, _: Session_
         msg = f"Approved. {n} new alert(s) created."
     elif action == "publish":
         msg = "Published without alerts."
-    _audit(db, action, str(doc.id), diff)
+    _audit(request, db, action, str(doc.id), diff)
     return RedirectResponse(f"/admin/documents/{doc.id}?msg={msg}", status_code=303)
 
 

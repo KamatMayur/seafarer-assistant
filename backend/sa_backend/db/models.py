@@ -360,6 +360,27 @@ class AdminEvent(Base):
     created_at: Mapped[datetime] = _now()
 
 
+class AdminAccount(Base):
+    """Per-person admin login: password (scrypt) + TOTP. Managed with `python -m sa_backend.admin.manage`."""
+
+    __tablename__ = "admin_accounts"
+    __table_args__ = (
+        CheckConstraint("role IN ('owner','editor')", name="admin_role_chk"),
+        Index("admin_accounts_email_lower", text("lower(email)"), unique=True),
+    )
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    email: Mapped[str] = mapped_column(String(320))
+    role: Mapped[str] = mapped_column(String(10), default="editor", server_default="editor")
+    password_hash: Mapped[str] = mapped_column(String(200))
+    totp_secret_enc: Mapped[str] = mapped_column(Text)  # Fernet-encrypted base32 secret
+    totp_last_step: Mapped[int] = mapped_column(BigInteger, default=0, server_default="0")  # replay guard
+    failed_attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    disabled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _now()
+
+
 class AdminAuditLog(Base):
     __tablename__ = "admin_audit_log"
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)

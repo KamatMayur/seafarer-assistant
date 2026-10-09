@@ -76,7 +76,8 @@ tags:
     electrical: {title: ['\bETOs?\b', 'electro[- ]?technical', '\bETRs?\b']}
     catering:   {title: ['\bcooks?\b', '\bcatering\b', '\bstewards?\b', '\bgalley\b', '\bchefs?\b', '\bsaloon\b']}
   level:
-    officer: {title: ['\bCoCs?\b', 'certificate of competency', '\bofficers?\b', '\bMEO\b', '\bmates?\b', '\bmasters?\b(?! ?(plan|data|list))', '\bETOs?\b', '\bNWKO\b']}
+    officer: {title: ['\bCoCs?\b', 'certificate of competency', '\bcompetency examinations?\b', 'grade competency',
+                      '\b(nautical|engineering) grade', '\bGMDSS\b.{0,20}\b(exam|result)', 'signal (exam|notice)', '\bofficers?\b', '\bMEO\b', '\bmates?\b', '\bmasters?\b(?! ?(plan|data|list))', '\bETOs?\b', '\bNWKO\b']}
     rating:  {title: ['\bratings?\b', '(?-i:\bAB\b)', 'able seafarer', 'ordinary seam[ae]n', '(?-i:\bOS\b)', '\bwipers?\b', 'motorman', '\bfitters?\b', '\bbosun\b', '\bpumpman\b', '\bGP\b', 'general purpose']}
     cadet:   {title: ['\bcadets?\b', '\btrainees?\b', 'pre-?sea', '\bDNS\b', 'B\.?\s?Sc\.?\s*nautical', '\bGME\b', 'graduate marine engineering', 'apprentice']}
   certificate_type:

@@ -68,8 +68,9 @@ def cmd_reprocess(args: argparse.Namespace) -> None:
         n = s.execute(
             Document.__table__.update()
             .where(
+                # Re-classifying an extracted document never downloads, so documents whose PDF had no text
+                # layer (scans) are included too; they are classified from the title.
                 Document.status.in_(statuses),
-                Document.raw_text.is_not(None) | (Document.text_policy != "full"),
                 Document.id.not_in(reviewed),
             )
             .values(status="extracted", attempts=0)
