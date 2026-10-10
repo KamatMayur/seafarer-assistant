@@ -58,7 +58,8 @@ account first with `python -m sa_backend.admin.manage create you@example.com --r
 
 ## Next steps (in order)
 1. **Owner: hosting decisions** – `docs/hosting-options.md` (recommended: DigitalOcean Bangalore 2 vCPU/4 GB,
-   a `.in` domain, Brevo free email). Also needed: operator name + privacy contact email for the notice.
+   a `.in` domain, Brevo free email; or the $0 option: Oracle Always Free in Mumbai/Hyderabad + DuckDNS +
+   a dedicated Gmail account). Also needed: operator name + privacy contact email for the notice.
 2. **Deploy** with `docs/deployment.md` (never run before: expect small fixes; update the runbook).
 3. **Build the tester installer** pointing at the server: `cd app; .\build_tester.ps1 -ApiBase https://api.<domain>`.
    Install it once on a clean PC following `docs/tester-install-guide.md` (not yet tried end to end).

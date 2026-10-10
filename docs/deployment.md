@@ -20,6 +20,9 @@ apt -y install ca-certificates curl git gnupg unattended-upgrades
 curl -fsSL https://get.docker.com | sh && usermod -aG docker deploy
 timedatectl set-timezone Asia/Kolkata
 ```
+**Oracle Cloud (free option):** the default user is `ubuntu` (use it instead of creating `deploy`), and ports 80/443
+must also be opened in the subnet's VCN security list and in iptables – see `docs/hosting-options.md`.
+
 Then log in as `deploy`. (Disable password SSH login once key login works.)
 
 ## 2. Code and settings
