@@ -1,82 +1,108 @@
-# Handoff — state of the project (07-Oct-2026)
+# Handoff – state of the project (10-Oct-2026)
 
-Read this first when continuing on a new machine. Spec: the original build prompt (phases 0–6). Plan docs: `docs/`.
+For whoever continues this project (and their Claude Code). Start here, then `CLAUDE.md` (standing rules and
+commands) and `docs/decisions.md` (why things are the way they are). Repository:
+https://github.com/KamatMayur/seafarer-assistant, branch `main`.
 
-## Decisions taken with the owner (binding)
-1. **No Anthropic API key.** Classification and tagging are rules-based (`scraper/sa_scraper/rules/taxonomy.yaml`). Summaries are *extractive*: they quote the PDF and never generate text. An LLM can be plugged in later via `SA_ANTHROPIC_API_KEY` as an optional upgrade, but nothing uses it yet.
-   - Translation (later): IndicTrans2 run locally. Q&A (later): cited passage search, with no generated answer.
-2. Placeholder product name `seafarer_assistant`. "DG Alerts" was rejected because it implies government affiliation (decisions.md D1). Email login only. Run locally. Monetisation off.
-3. **Deviation from decisions.md D7:** there is no Redis/arq. The worker is a plain loop (`sa-scraper worker`) and Postgres row status acts as the queue. This keeps local dev Docker-free. Redis can be added later if needed.
-4. Privacy: exam results, CoC dispatch lists and other candidate lists are `metadata_only`. Their PDFs are never downloaded or stored because they contain names.
-5. Documents older than 183 days are `archived` (metadata only). Alerts only go out for documents published in the last 30 days, so a backfill never floods users.
-6. Only *title*-strength tags restrict who is alerted. Body-text tags are "mentions". Unknown doc types (confidence < 0.65) are held in `needs_review`. Critical advisories are never held.
+## In one paragraph
+A Windows app (Flutter) plus a Python backend for Indian merchant navy seafarers. The backend scrapes 13 public
+dgma.gov.in listing pages, extracts and classifies each circular/notice with **rules (no LLM)**, writes an
+extractive summary (quotes only), and creates alerts for users whose profile matches (department, level, MMD,
+exam grades, ship types, followed topics, certificates held). The app shows those alerts, the documents, an
+archive search and a certificate wallet with expiry reminders, and works offline. **Phase 1 (backend) is
+complete. Phase 2 (Windows app) is built and runs; a few items remain (below).** Phases 3–6 not started.
 
-## Phase 1 — backend pipeline: DONE (checkpoint not yet reviewed)
-- `scraper/sources/dgma.yaml`: 13 live sources, all verified healthy. These are the year-list pages by type plus latest news, piracy, ISPS and training. Columns are mapped by header text, so drift is reported.
-- `sa_scraper`: polite HTTP client (robots, UA, ≥5 s spacing, retries, size cap), parser, classifier, extractive summariser, OCR-quality detection, pipeline, CLI.
-- `sa_backend`: models plus an Alembic migration (`0001`), matching (pure, tested), alerts (idempotent, quiet hours IST), email provider, admin events (Slack/email/log, 12 h de-duplication) and expiry reminders (180/90/30/7/0 days, then expired).
-- FastAPI API (`/v1`): email-code auth with JWT and rotating refresh tokens, profile, topics, devices, feed, document search (Postgres full-text search) and detail, offline sync with version conflicts, data export ZIP, account deletion, `/v1/meta`, `/v1/admin/status`, health checks.
-- Tests: 94 passing (`pytest` from the repo root). Coverage 85%. `ruff check` is clean.
-- Seed: real DGMA data was being processed on the old machine. It is **not** carried over (see re-seed below).
+## Status by phase
+| Phase | State |
+|---|---|
+| 0 Plan | Done: `docs/architecture.md`, `schema.sql`, `openapi.yaml`, `screens.md`, `decisions.md` |
+| 1 Backend pipeline + admin | **Done.** 13 sources healthy; 129 tests pass; ruff clean. Admin UI at `/admin` with per-admin accounts (password + TOTP). Not done: Docker compose smoke test (no Docker on the dev machine). |
+| 2 Windows app | **Built and running** (`demo.ps1`). Remaining: 3 widget tests failing, window title rebuild, MSIX installer, tester checkpoint. See "Next steps". |
+| 3–6 | Not started (translations via IndicTrans2, OCR scan, RPSL/vessel checks, sea time/NRI, PDF export, cited search, premium, mobile, launch). |
 
-## Session 2 (07-Oct-2026): DONE
-- Binding decisions above recorded in `docs/decisions.md` (R1–R6; D7/D11 marked superseded).
-- **Admin web UI** at `/admin` (`backend/sa_backend/admin/`, Jinja + vendored HTMX, no CDN). Log in with `SA_ADMIN_TOKEN` → 12 h signed cookie (HttpOnly, SameSite=Strict, invalidated when the token rotates) + CSRF token on every POST. Pages: dashboard (doc counts, source health, admin events with Acknowledge), review queue, document search/list, document editor (doc type, priority, audience, title-strength tags as checkboxes, summary/key points/deadline) with **Save**, **Save & approve (send alerts)**, **Publish without alerts**; audit log. Every action is written to `admin_audit_log`. Saving marks the English summary `method=human, verified_by_human`.
-- `sa-scraper reprocess` now **skips admin-reviewed documents** so rule changes never undo human edits.
-- **Bug fixed:** with SQLAlchemy 2.1 (what pip installs now), `rowcount` of `INSERT … ON CONFLICT` is -1, so alert and expiry-reminder counts were wrong (reminders even returned negative counts). Inserts now use `RETURNING`. Regression test added.
-- `infra/`: `Dockerfile`, `docker-compose.yml` (pgvector/pg16, one-shot `migrate`, `api`, `worker`, Caddy auto-HTTPS with admin CSP), `Caddyfile`, `.env.prod.example`, `backup.sh` (nightly gpg-encrypted pg_dump). **Not yet built/run: Docker is not installed on the dev machine.** The settings now refuse to start outside `SA_ENV=dev` without a long `SA_JWT_SECRET`.
-- `infra/dev/demo_profiles.py`: Phase 1 checkpoint demo (4 sample profiles, matched alerts with reasons; `--remove` deletes them).
-- Taxonomy: nautical CoC dispatch lists are now deck-only (`dispatch list of nautical`); before, they reached every officer.
-- Re-seeded on 07-Oct-2026: 13/13 sources ok; 367 processed, 15 needs_review, 567 archived, 3 retry (one is a 45 MB PDF over the 25 MB cap).
-- Tests: 108 passing, coverage 88%, ruff clean.
+## Binding decisions (details in docs/decisions.md)
+- **R1 No LLM / no API key.** Rules-based tags; extractive summaries. Translation later with IndicTrans2 (local).
+- **R2 No Redis.** Worker is a loop (`sa-scraper worker`); Postgres row status is the queue.
+- **R3** Placeholder name `seafarer_assistant` ("DG Alerts" rejected: implies government). Email login only. Local
+  hosting for now. Monetisation off.
+- **R4** Local Postgres without Docker: `infra/dev/localpg.py` (pip `pgserver`, PostgreSQL 16 + pgvector).
+- **R5** Review threshold 0.65; only title tags restrict alerts; critical advisories never held.
+- **R6** Candidate lists are metadata-only (privacy); >183 days archived; alerts only for the last 30 days.
+- **R7** CoC dispatch lists are opt-in (follow topic `coc_dispatch`), never a certificate-impact alert.
+- **R8** The issuing branch never restricts the audience. **R9** Competency/GMDSS/signal exam notices are officer-only.
+- **R10** The app groups a document's alerts into one feed card. **R11** Per-admin accounts with TOTP.
+- Owner applied defaults for R7–R11 to finish Phase 1; they can still change them.
 
-## Phase 1 checkpoint demo — findings for the owner (07-Oct-2026)
-`infra/dev/demo_profiles.py` result (last 30 days): deck officer Mumbai 28 alerts, engine officer Kolkata 23, AB rating Chennai 12, ETO cadet Kochi 5. Every alert carries a "why". Points to decide:
-1. **CoC dispatch lists are noisy.** Each one gives a CoC holder two items (new_document + cert_impact), and there are about 3 a week per wing. Suggestion: treat dispatch lists as a followable topic (`coc_dispatch`, off by default) and skip cert_impact for them.
-2. **Issuing branch counts as title text** (`classify(head = title + branch)`). The engine rule `engineering (wing|…)` therefore tags all 123 "Engineering Wing" documents engine-only, including general safety circulars. I deliberately did not add a matching "Nautical Wing" rule (it made the FFLB lifeboat circular deck-only). Decide whether the branch should restrict audience at all.
-3. Ratings receive nautical CoC-exam seat-booking notices (department deck, no level tag). A `level: officer` rule for "competency examination"/"CoC exam" would fix it.
-4. Feed UI should group the new_document + cert_impact pair for the same document into one card.
+## What exists (where to look)
+- `scraper/sources/dgma.yaml` – the 13 sources (mostly `/year-list?type=…&year={year}&rows=100`), header-mapped
+  tables, so layout drift raises an admin event instead of failing silently.
+- `scraper/sa_scraper/rules/taxonomy.yaml` – all classification rules. `classify.py` applies them;
+  `summarise.py` extracts subject, directive sentences and deadlines (a deadline must sit in a sentence that asks
+  the reader to act); `extract.py` detects bad OCR text layers (title-vs-subject check).
+- `backend/sa_backend/services/matching.py` – who gets what (pure function, fully tested).
+  `alerts.py` – creates alerts when a document is processed, and `backfill_user_alerts` gives a new or edited
+  profile the matching alerts of the last 30 days (in-app only).
+- `backend/sa_backend/api/` – `/v1` API used by the app; `admin/` – review queue, editor, audit log.
+- `app/lib/` – Flutter app. `data/repositories.dart` holds all network→local-DB logic (feed incremental sync with
+  offline read marks; certificate sync with version conflicts; offline document cache). `core/background.dart`
+  polls every 30 min (2 h data saver), shows Windows toasts for new alerts and local expiry reminders.
+- Real-data demo (last 30 days, `infra/dev/demo_profiles.py`): deck officer Mumbai 15 alerts, engine officer
+  Kolkata 12, AB rating Chennai 9, ETO cadet Kochi 5; every alert says why.
 
+## Try it (after setup below)
+Right-click `demo.ps1` → Run with PowerShell. It starts the database, an "Seafarer API" window and the app. Sign in
+with any email; the 6-digit code appears in the API window (`DEV LOGIN CODE …`) because SMTP is not configured.
+Fill the profile; the feed fills with matching real circulars. Admin: http://127.0.0.1:8000/admin (create an
+account first with `python -m sa_backend.admin.manage create you@example.com --role owner`).
 
-## Session 3 (09-Oct-2026): Phase 1 completed
-- Checkpoint findings 1–4 resolved as decisions R7–R10 (`docs/decisions.md`): dispatch lists opt-in with no cert_impact; issuing branch never restricts the audience; competency/GMDSS/signal exam notices are officer-only; feed cards group per document (done in the app).
-- Further fixes found by reading the real demo feeds: an industry title ("Quarterly Tonnage Statement") now beats seafarer words in the body; followed/muted topics use title tags only (no "You follow: Exams" on a lifeboat circular).
-- **Bug fixed:** `sa-scraper reprocess` skipped documents without a text layer (22 scans kept stale tags). Regression test added.
-- **R11 per-admin accounts:** email + scrypt password + TOTP, 5-failure lockout, sessions end on password reset/disable, audit log records the admin's email. `python -m sa_backend.admin.manage create you@example.com --role owner`. Migration `0002`. The shared `SA_ADMIN_TOKEN` only works until the first account exists.
-- Demo on real data (last 30 days): deck officer Mumbai 15 alerts, engine officer Kolkata 12, AB rating Chennai 9, ETO cadet Kochi 5.
-- Tests: 128 passing; ruff clean.
-- Not done: Docker compose smoke test (Docker is not installed; Docker Desktop installs mostly on C:, owner wants D: only).
+## Next steps (in order)
+1. **Fix the 3 failing widget tests** in `app/test/widgets_test.dart` (domain, certificate-sync and live-API tests
+   pass). Seen so far: "welcome…consent" → `Bad state: No element`; "wallet groups…" → an assertion; "feed card…"
+   failed in the first run. Likely causes to check: the test router/`GoRouterState.of` use in the welcome flow,
+   the wallet test's Drift stream needing `pumpAndSettle`/disposal, and `FeedCardTile` needing a `Card` ancestor
+   theme. Run: `cd app; flutter test --no-pub --timeout 90s test/widgets_test.dart`.
+2. **Rebuild** (`flutter build windows --release`) – window title is already changed to "Seafarer Assistant" in
+   `app/windows/runner/main.cpp` / `Runner.rc` but not yet rebuilt.
+3. **Try every screen by hand** against the local API (checklist in `docs/test-checklist.md`, sections Offline,
+   Certificates, Languages/UI) and fix what you find. Not yet hand-tested: certificate file attach/view, data
+   export, delete account, quiet hours, toast click-through.
+4. **Build the MSIX installer** (`dart run msix:create`) – self-signed for testers; instructions in `app/README.md`.
+   That is the Phase 2 checkpoint ("installable Windows build for testers").
+5. Then Phase 3 (see `docs/architecture.md` and the spec): regional languages (IndicTrans2), OCR scan
+   (Windows.Media.Ocr), RPSL/vessel lists, sea time/NRI calculator, PDF export, cited search, premium gating.
 
-## Remaining
-- Owner review of the Phase 1 decisions R7–R11 (defaults applied; change any you disagree with).
-- Build and smoke-test `infra/docker-compose.yml` on a machine with Docker.
+## Known issues / limits
+- Windows notifications only appear while the app is running (no FCM on Windows; tray/run-at-login not built yet).
+- Summaries are quotes, not plain language (R1). Indian-language summaries fall back to English (banner shown).
+- 3 PDFs failed processing (one is 45 MB, over the 25 MB cap) – visible in `sa-scraper status`.
+- The Docker deployment files in `infra/` have never been built or run.
+- `pgserver`'s Postgres port changes after a reboot: re-run `infra/dev/localpg.py` and update `.env`
+  (`demo.ps1` does this automatically).
 
-- **Phase 2 (Windows Flutter app): not started.** It needs the Flutter SDK and Visual Studio 2022 Build Tools ("Desktop development with C++"). Screens: `docs/screens.md`. API: `/v1/*` (the generated OpenAPI is at `/docs` when the API runs).
-- Phases 3–6 as in the spec. Phase 3 adds IndicTrans2 translation, RPSL/vessel lists, sea time/NRI, PDF export, OCR scan and cited search.
-
-## Setup on a new machine (Windows)
-Use **Python 3.12** (`pgserver` has no wheels for 3.13/3.14): `winget install Python.Python.3.12 --scope user`.
+## Setup on a new Windows machine
+Python 3.12, Git. For the app: Flutter SDK (stable 3.47+) and Visual Studio 2022 Build Tools with "Desktop
+development with C++" **plus the "C++ ATL" component**; turn on Windows **Developer Mode**.
+(Owner's machine: everything under `D:\tools`, `PUB_CACHE=D:\tools\pub-cache`.)
 ```powershell
-git clone <repo> ; cd <repo>
+git clone https://github.com/KamatMayur/seafarer-assistant.git; cd seafarer-assistant
 py -3.12 -m venv .venv
 .venv\Scripts\pip install -e backend[dev] -e scraper[dev]
-.venv\Scripts\python infra\dev\localpg.py            # prints SA_DATABASE_URL
-.venv\Scripts\python infra\dev\localpg.py seafarer_test
-copy .env.example .env   # paste both URLs, set SA_JWT_SECRET and SA_ADMIN_TOKEN (SA_SCRAPER_CONTACT optional)
-cd backend ; ..\.venv\Scripts\python -m alembic upgrade head ; cd ..
-.venv\Scripts\python -m pytest
-# Re-seed real data (~30–60 min, 5 s between requests):
-.venv\Scripts\python -c "from sa_scraper.cli import main; main()" scrape
-.venv\Scripts\python -c "from sa_scraper.cli import main; main()" process --limit 500 --since <today minus 6 months>
-.venv\Scripts\python -c "from sa_scraper.cli import main; main()" status
-.venv\Scripts\python infra\dev\demo_profiles.py
-# API + admin UI (http://127.0.0.1:8000/admin):
-.venv\Scripts\python -m uvicorn sa_backend.api.app:app --http h11 --loop asyncio --ws none
+.venv\Scripts\python infra\dev\localpg.py                 # prints SA_DATABASE_URL
+.venv\Scripts\python infra\dev\localpg.py seafarer_test   # prints SA_TEST_DATABASE_URL
+copy .env.example .env    # paste both URLs; set SA_JWT_SECRET (long random) and SA_SCRAPER_CONTACT (your email)
+cd backend; ..\.venv\Scripts\alembic upgrade head; cd ..
+.venv\Scripts\python -m pytest -o addopts=""              # expect 129 passed
+# Real data (~30–40 min at 5 s/request). Use today's date minus 6 months:
+.venv\Scripts\sa-scraper scrape
+.venv\Scripts\sa-scraper process --limit 500 --since 2026-04-10
+.venv\Scripts\python infra\dev\demo_profiles.py          # optional: sample profiles and their alerts
+# App
+cd app; flutter pub get; dart run build_runner build; flutter test --no-pub; flutter build windows --release; cd ..
+.\demo.ps1
 ```
-Notes:
-- The `pgserver` Postgres picks a port when it starts. If the port changes after a reboot, re-run `localpg.py` and update `.env`.
-- **Windows Smart App Control** (Windows 11) blocks unsigned compiled files downloaded by pip: psycopg's binary `pq`, SQLAlchemy's Cython speedups, uvicorn's `httptools`/`watchfiles`, and pip's `.exe` launchers (`sa-scraper.exe`, `uvicorn.exe`, `alembic.exe`). Symptom: "An Application Control policy has blocked this file". Do not turn SAC off; instead:
-  - run tools as `python -m …` (or `python -c "from sa_scraper.cli import main; main()" …` for the CLI), uvicorn with `--http h11 --loop asyncio --ws none` and no `--reload`;
-  - force pure-Python DB drivers with a venv-local hook (not committed) — create `.venv\Lib\site-packages\_sa_sac_workaround.pth` containing one line:
-    `import os, sys; os.environ.setdefault("DISABLE_SQLALCHEMY_CEXT_RUNTIME", "1"); os.environ.setdefault("PSYCOPG_IMPL", "python"); os.environ["PATH"] = os.path.join(sys.prefix, "Lib", "site-packages", "pgserver", "pginstall", "bin") + os.pathsep + os.environ.get("PATH", "")`
-    (psycopg's pure-Python mode then uses the signed-OK `libpq.dll` bundled with pgserver).
+
+## History
+- 06-Oct-2026: Phase 0 plan; Phase 1 pipeline, API, 94 tests (session 1).
+- 07-Oct-2026: admin UI, deployment files, alert-count bug fix, checkpoint demo (session 2, another machine).
+- 09–10-Oct-2026: Phase 1 completed (R7–R11, reprocess bug, admin TOTP); Phase 2 app written, built and run;
+  new-user feed backfill; `demo.ps1`; this handoff (session 3).
