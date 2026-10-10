@@ -246,3 +246,25 @@ def test_prod_refuses_default_jwt_secret(monkeypatch):
     get_settings.cache_clear()
     assert get_settings().env == "prod"
     get_settings.cache_clear()
+
+
+def test_new_user_feed_is_backfilled_from_recent_documents(client, caplog, db):
+    _seed_document(db)  # processed yesterday, engine-only, about CoCs
+    tokens = login(client, caplog)
+    assert client.get("/v1/feed", headers=auth(tokens)).json()["items"] == []
+
+    client.patch("/v1/me", headers=auth(tokens), json={"department": "deck", "level": "officer"})
+    assert client.get("/v1/feed", headers=auth(tokens)).json()["items"] == []  # not for deck
+
+    client.patch("/v1/me", headers=auth(tokens), json={"department": "engine"})
+    items = client.get("/v1/feed", headers=auth(tokens)).json()["items"]
+    assert [i["kind"] for i in items] == ["new_document"]
+
+    # adding a CoC adds the "may affect your certificate" alert; repeating changes nothing (idempotent)
+    cert = {"id": str(uuid.uuid4()), "type": "coc", "expiry_date": "2030-01-01", "version": 0}
+    client.post("/v1/sync/push", headers=auth(tokens), json={"certificates": [cert]})
+    client.patch("/v1/me", headers=auth(tokens), json={"department": "engine"})
+    kinds = sorted(i["kind"] for i in client.get("/v1/feed", headers=auth(tokens)).json()["items"])
+    assert kinds == ["cert_impact", "new_document"]
+    with db() as s:
+        assert s.scalar(select(func.count()).select_from(Alert).where(Alert.channel != "in_app")) == 0

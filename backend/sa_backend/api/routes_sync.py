@@ -22,6 +22,7 @@ from sa_backend.api.schemas import (
     SyncPushResult,
 )
 from sa_backend.db.models import CertDocumentLink, Certificate, Document, SeaService
+from sa_backend.services.alerts import backfill_user_alerts
 
 router = APIRouter(tags=["sync"])
 
@@ -65,6 +66,9 @@ def push(body: SyncPush, user: CurrentUser, db: DB) -> SyncPushResult:
         if s.sign_off and s.sign_off < s.sign_on:
             raise HTTPException(422, f"sea service {s.id}: sign-off before sign-on")
         _apply(db, SeaService, s, SEA_FIELDS, user, "sea_service", applied, conflicts, now)
+    if applied:
+        db.flush()
+        backfill_user_alerts(db, user)  # a newly added certificate gets its "may affect" alerts
     return SyncPushResult(applied=applied, conflicts=conflicts)
 
 

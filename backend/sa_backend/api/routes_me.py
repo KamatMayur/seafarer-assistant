@@ -21,6 +21,7 @@ from sa_backend.db.models import (
     User,
     UserTopicPref,
 )
+from sa_backend.services.alerts import backfill_user_alerts
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -74,6 +75,7 @@ def update_me(body: ProfileUpdate, user: CurrentUser, db: DB) -> Profile:
     for k, v in data.items():
         setattr(user, k, v)
     db.flush()
+    backfill_user_alerts(db, user)  # recent matching documents appear in the feed right away
     return to_profile(user)
 
 
@@ -87,6 +89,9 @@ def put_topics(body: list[TopicPref], user: CurrentUser, db: DB) -> None:
     db.execute(delete(UserTopicPref).where(UserTopicPref.user_id == user.id))
     for p in {p.topic: p for p in body}.values():
         db.add(UserTopicPref(user_id=user.id, topic=p.topic, mode=p.mode))
+    db.flush()
+    db.expire(user, ["topic_prefs"])
+    backfill_user_alerts(db, user)
 
 
 @router.post("/devices")

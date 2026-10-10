@@ -137,3 +137,56 @@ def create_document_alerts(session: Session, doc: Document, now: datetime | None
             )
     log.info("alerts for %s (%s): %d new", doc.circular_number or doc.title[:40], facts.audience, created)
     return created
+
+
+def backfill_user_alerts(session: Session, user: User, now: datetime | None = None) -> int:
+    """Give one user the in-app alerts for documents of the last ALERT_WINDOW_DAYS that match them now.
+
+    Called after sign-up, profile, topic and certificate changes, so a new user does not start with an empty feed
+    and a changed profile takes effect for recent documents. In-app only: no email or push for old documents.
+    Idempotent (same dedupe keys as create_document_alerts). Alerts already created are never removed.
+    """
+    now = now or datetime.now(IST)
+    since = (now - timedelta(days=ALERT_WINDOW_DAYS)).date()
+    certs = list(
+        session.scalars(select(Certificate).where(Certificate.user_id == user.id, Certificate.deleted_at.is_(None)))
+    )
+    facts_user = user_facts(user, certs)
+    created = 0
+    docs = session.scalars(
+        select(Document).where(Document.status == "processed", Document.published_date >= since)
+    ).all()
+    for doc in docs:
+        m = match(doc_facts(doc), facts_user)
+        if m is None:
+            continue
+        created += _insert_alert(
+            session,
+            user_id=user.id,
+            document_id=doc.id,
+            kind=m.kind,
+            channel="in_app",
+            priority=m.priority,
+            reason=m.reason,
+            dedupe_key=f"doc:{doc.id}:{doc.pdf_hash or 'listing'}",
+            sent_at=now,
+        )
+        for cert_id, reason in m.cert_impacts:
+            session.execute(
+                insert(CertDocumentLink)
+                .values(certificate_id=cert_id, document_id=doc.id, reason=reason, notified_at=now)
+                .on_conflict_do_nothing()
+            )
+            created += _insert_alert(
+                session,
+                user_id=user.id,
+                document_id=doc.id,
+                certificate_id=cert_id,
+                kind="cert_impact",
+                channel="in_app",
+                priority="normal",
+                reason=reason,
+                dedupe_key=f"cert:{cert_id}:doc:{doc.id}",
+                sent_at=now,
+            )
+    return created

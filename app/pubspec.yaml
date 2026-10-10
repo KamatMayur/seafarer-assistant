@@ -1,0 +1,51 @@
+name: seafarer_assistant
+description: "Independent DGMA circular alerts and certificate wallet for Indian seafarers. Not affiliated with DGMA."
+publish_to: 'none'
+version: 0.2.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  cryptography: ^2.9.0
+  drift: ^2.35.2
+  drift_flutter: ^0.3.1
+  file_picker: ^13.1.0
+  flutter:
+    sdk: flutter
+  flutter_local_notifications: ^22.0.0
+  flutter_riverpod: ^3.4.3
+  flutter_secure_storage: ^11.2.0
+  go_router: ^18.0.2
+  http: ^1.6.0
+  intl: ^0.20.3
+  open_filex: ^4.7.0
+  package_info_plus: ^10.2.2
+  path: ^1.9.1
+  path_provider: ^2.1.6
+  url_launcher: ^6.3.3
+  uuid: ^4.6.0
+
+dev_dependencies:
+  build_runner: ^2.16.2
+  drift_dev: ^2.35.1
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  msix: ^3.18.0
+
+flutter:
+  uses-material-design: true
+
+# Windows installer: `dart run msix:create` -> build/windows/x64/runner/Release/seafarer_assistant.msix
+# Without a code-signing certificate the package is signed with a self-signed test certificate (see app/README.md).
+msix_config:
+  display_name: Seafarer Assistant
+  publisher_display_name: Seafarer Assistant (independent)
+  identity_name: SeafarerAssistant.App
+  msix_version: 0.2.0.0
+  capabilities: internetClient
+  toast_activator:
+    clsid: 6f1d5b1e-8c1a-4f5e-9a9f-2d3c4b5a6e7f
+    arguments: "-ToastActivated"
+    display_name: Seafarer Assistant
