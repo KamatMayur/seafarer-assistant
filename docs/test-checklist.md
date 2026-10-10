@@ -32,6 +32,15 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | A10 | 5 failed logins | Account locked 15 min, even with correct factors | test_lockout_after_repeated_failures |
 | A11 | Password reset or account disabled | That admin's sessions end immediately | test_disable_and_password_reset_end_sessions |
 | A12 | Same TOTP code used twice | Second use rejected (replay) | test_totp_rejects_replay_and_old_codes |
+| A13 | Tester sends a report / the app crashes | Appears under Admin → Feedback; deleted with the account | test_api::test_feedback_and_crash_reports |
+| A14 | Unexpected server error | 500 with a generic message; admin event recorded | test_api::test_unexpected_errors_are_reported |
+
+## App (Phase 2)
+| # | Case | Auto |
+|---|---|---|
+| W1 | Full journey: consent, email code, profile, backfilled feed, document, wallet, search, report, delete account | `app/integration_test/app_flow_test.dart` (real app + local API) |
+| W2 | Close window → hides to tray; second launch brings it back; `--minimized` starts hidden | manual (verified 10-Oct-2026) |
+| W3 | Install the MSIX on a clean PC with the test certificate | ☐ not yet done |
 
 ## Matching
 | # | Case | Expected |

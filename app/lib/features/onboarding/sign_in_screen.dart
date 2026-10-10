@@ -31,7 +31,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     try {
       await action();
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -39,7 +39,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Future<void> _sendCode() => _run(() async {
         await ref.read(authRepoProvider).startEmailLogin(_email.text.trim());
-        setState(() => _codeSent = true);
+        if (mounted) setState(() => _codeSent = true);
       });
 
   Future<void> _verify() => _run(() async {

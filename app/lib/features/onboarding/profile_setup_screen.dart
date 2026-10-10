@@ -76,7 +76,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         ref.read(sessionProvider.notifier).profileSaved();
       }
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

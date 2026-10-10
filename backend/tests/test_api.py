@@ -268,3 +268,61 @@ def test_new_user_feed_is_backfilled_from_recent_documents(client, caplog, db):
     assert kinds == ["cert_impact", "new_document"]
     with db() as s:
         assert s.scalar(select(func.count()).select_from(Alert).where(Alert.channel != "in_app")) == 0
+
+
+def test_feedback_and_crash_reports(client, caplog, db):
+    tokens = login(client, caplog)
+    r = client.post(
+        "/v1/feedback",
+        headers=auth(tokens),
+        json={
+            "kind": "problem",
+            "message": "FAKE: feed is empty after sign-in",
+            "app_version": "0.2.0",
+            "platform": "windows",
+            "context": {"screen": "feed", "big": "x" * 2000},
+        },
+    )
+    assert r.status_code == 201
+    assert client.post("/v1/feedback", json={"kind": "problem", "message": "x"}).status_code == 401
+    assert client.post("/v1/feedback", headers=auth(tokens), json={"kind": "spam", "message": "x"}).status_code == 422
+    with db() as s:
+        from sa_backend.db.models import UserFeedback
+
+        f = s.scalar(select(UserFeedback))
+        assert f.kind == "problem" and len(f.context["big"]) == 500  # bounded
+    # deleted with the account
+    client.delete("/v1/me", headers=auth(tokens))
+    with db() as s:
+        assert s.scalar(select(func.count()).select_from(UserFeedback)) == 0
+
+
+def test_privacy_notice_fills_settings(client, monkeypatch):
+    from sa_backend.settings import get_settings
+
+    page = client.get("/privacy").text
+    assert "[contact email not set]" in page and "not affiliated with DGMA" in page
+    monkeypatch.setenv("SA_PRIVACY_CONTACT", "privacy@example.com")
+    monkeypatch.setenv("SA_OPERATOR_NAME", "FAKE Operator")
+    get_settings.cache_clear()
+    page = client.get("/privacy").text
+    assert "privacy@example.com" in page and "FAKE Operator" in page and "<script" not in page
+    md = client.get("/v1/legal/privacy").json()
+    assert md["version"] and "Delete my account" in md["markdown"]
+
+
+def test_unexpected_errors_are_reported(db, monkeypatch):
+    from sa_backend.api.app import create_app
+    from sa_backend.db.models import AdminEvent
+
+    app = create_app()
+
+    @app.get("/boom")
+    def boom():
+        raise RuntimeError("FAKE failure")
+
+    c = TestClient(app, raise_server_exceptions=False)
+    r = c.get("/boom")
+    assert r.status_code == 500 and "reported" in r.json()["detail"]
+    with db() as s:
+        assert "RuntimeError" in s.scalar(select(AdminEvent.message))

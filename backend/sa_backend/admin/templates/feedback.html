@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Feedback{% endblock %}
+{% block body %}
+<h1>Tester feedback
+  <span class="muted">({{ "all" if show_all else "open" }}, latest 200)</span>
+  <a class="muted" style="font-size:.9rem" href="/admin/feedback{{ '' if show_all else '?show=all' }}">{{ "show open only" if show_all else "show all" }}</a>
+</h1>
+<div class="table-wrap"><table>
+  <tr><th>When</th><th>Kind</th><th>From</th><th>Message</th><th></th></tr>
+  {% for f, email in rows %}
+  <tr>
+    <td class="muted" style="white-space:nowrap">{{ f.created_at.strftime("%d %b %H:%M") }}</td>
+    <td>{{ f.kind }}</td>
+    <td class="muted">{{ email }}<br>{{ f.platform or "" }} {{ f.app_version or "" }}</td>
+    <td><div style="white-space:pre-wrap;max-height:16rem;overflow:auto">{{ f.message }}</div>
+      {% if f.context %}<div class="muted">{{ f.context | tojson }}</div>{% endif %}</td>
+    <td>{% if f.resolved_at %}<span class="muted">done</span>{% else %}
+      <form method="post" action="/admin/feedback/{{ f.id }}/resolve" style="margin:0">
+        <input type="hidden" name="csrf" value="{{ csrf }}"><button type="submit">Mark done</button>
+      </form>{% endif %}</td>
+  </tr>
+  {% else %}<tr><td colspan="5" class="muted">Nothing here.</td></tr>{% endfor %}
+</table></div>
+{% endblock %}

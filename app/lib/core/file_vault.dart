@@ -11,23 +11,27 @@ import 'package:path_provider/path_provider.dart';
 /// The key is generated on first use and kept in the OS credential store, so a copied file is unreadable
 /// elsewhere. File layout: 12-byte nonce | ciphertext | 16-byte MAC.
 class FileVault {
-  FileVault({FlutterSecureStorage? storage, Future<Directory> Function()? baseDir})
-      : _storage = storage ?? const FlutterSecureStorage(),
+  FileVault({
+    FlutterSecureStorage? storage,
+    Future<Directory> Function()? baseDir,
+    this.keyName = 'sa_file_vault_key',
+  })  : _storage = storage ?? const FlutterSecureStorage(),
         _baseDir = baseDir ?? getApplicationSupportDirectory;
 
   final FlutterSecureStorage _storage;
   final Future<Directory> Function() _baseDir;
   final _algo = AesGcm.with256bits();
-  static const _keyName = 'sa_file_vault_key';
+  /// Credential Manager entry holding the key (tests use their own so they never touch real data).
+  final String keyName;
   SecretKey? _key;
 
   Future<SecretKey> _secretKey() async {
     if (_key != null) return _key!;
-    var b64 = await _storage.read(key: _keyName);
+    var b64 = await _storage.read(key: keyName);
     if (b64 == null) {
       final rnd = Random.secure();
       b64 = base64Encode(List<int>.generate(32, (_) => rnd.nextInt(256)));
-      await _storage.write(key: _keyName, value: b64);
+      await _storage.write(key: keyName, value: b64);
     }
     return _key = SecretKey(base64Decode(b64));
   }
@@ -69,7 +73,7 @@ class FileVault {
   Future<void> wipe() async {
     final d = await _dir();
     if (d.existsSync()) await d.delete(recursive: true);
-    await _storage.delete(key: _keyName);
+    await _storage.delete(key: keyName);
     _key = null;
   }
 }

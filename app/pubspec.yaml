@@ -34,6 +34,8 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
   msix: ^3.18.0
 
 flutter:
@@ -49,6 +51,7 @@ msix_config:
   identity_name: SeafarerAssistant.App
   msix_version: 0.2.0.0
   capabilities: internetClient
+  install_certificate: false  # no interactive prompt; testers trust the test certificate (docs/tester-install-guide.md)
   # Start with Windows into the tray; users can switch it off in Settings > Apps > Startup.
   startup_task:
     task_id: SeafarerAssistantStartup

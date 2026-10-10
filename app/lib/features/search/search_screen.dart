@@ -51,13 +51,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             department: _dept,
             page: _page,
           );
+      if (!mounted) return; // the user left the Archive tab while this search was loading
       setState(() {
         _items = more ? [..._items, ...r.items] : r.items;
         _total = r.total;
         _offline = r.offline;
       });
     } on ApiException catch (e) {
-      setState(() => _error = e.message);
+      if (mounted) setState(() => _error = e.message);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

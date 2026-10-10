@@ -34,14 +34,16 @@ In dev mode the sign-in code is printed in the API terminal (`DEV LOGIN CODE ...
 
 ## Test
 ```powershell
-flutter test
+flutter test --no-pub --timeout 60s          # unit + widget tests
+# Full UI journey on the real app against a local API (see the header of integration_test/app_flow_test.dart):
+flutter test integration_test -d windows --dart-define=API_BASE=http://127.0.0.1:8001 --dart-define=API_LOG=<api log>
 ```
 
 ## Build the installer for testers (MSIX)
 ```powershell
-flutter build windows --release
-dart run msix:create
+.\build_tester.ps1 -ApiBase https://api.<domain> -Version 0.2.0   # -> ..\dist\SeafarerAssistant-0.2.0-test.msix
 ```
+Tester instructions: `docs/tester-install-guide.md` and `docs/tester-checklist.md`.
 Output: `build\windows\x64\runner\Release\seafarer_assistant.msix`. It is signed with a self-signed test
 certificate, so testers must trust it once: right-click the .msix → Properties → Digital Signatures → Details →
 View Certificate → Install Certificate → Local Machine → "Trusted People". A real code-signing certificate

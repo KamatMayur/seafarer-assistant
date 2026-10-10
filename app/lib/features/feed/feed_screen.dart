@@ -59,6 +59,7 @@ class _FeedList extends ConsumerWidget {
       ),
       body: Column(children: [
         const OfflineBanner(),
+        const _TesterTips(),
         Expanded(
           child: items.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -193,6 +194,45 @@ class FeedCardTile extends StatelessWidget {
               ),
           ]),
         ),
+      ),
+    );
+  }
+}
+
+
+final _tipsDismissedProvider =
+    StreamProvider<bool>((ref) => ref.watch(databaseProvider).watchValue('tips_dismissed').map((v) => v == '1'));
+
+/// First-run tips for testers. Dismissed once, stays dismissed on this device.
+class _TesterTips extends ConsumerWidget {
+  const _TesterTips();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(_tipsDismissedProvider).value ?? true) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    return Card(
+      color: cs.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(Icons.science_outlined, color: cs.onPrimaryContainer),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Test version. You see circulars from the last 30 days that match your profile; each card says why. '
+              'Summaries are quoted from the official PDF, not rewritten, so always open the PDF before acting. '
+              'Closing the window keeps the app in the tray so alerts keep coming. '
+              'Something wrong or missing? Settings > Report a problem.',
+              style: TextStyle(color: cs.onPrimaryContainer),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Got it',
+            icon: Icon(Icons.close, color: cs.onPrimaryContainer),
+            onPressed: () => ref.read(databaseProvider).setValue('tips_dismissed', '1'),
+          ),
+        ]),
       ),
     );
   }

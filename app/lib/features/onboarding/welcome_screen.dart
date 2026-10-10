@@ -56,6 +56,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               ),
               controlAffinity: ListTileControlAffinity.leading,
             ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: () => context.push('/privacy'),
+                child: const Text('Read the privacy notice and tester terms'),
+              ),
+            ),
             CheckboxListTile(
               value: _email,
               onChanged: (v) => setState(() => _email = v ?? false),

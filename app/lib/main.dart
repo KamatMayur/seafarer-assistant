@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,6 +20,18 @@ Future<void> main(List<String> args) async {
     desktopShell = DesktopShell(container);
     await desktopShell!.init();
   }
+
+  // Crash reports (error + app version only), queued and sent when online.
+  final feedback = container.read(feedbackProvider);
+  final previousOnError = FlutterError.onError;
+  FlutterError.onError = (details) {
+    previousOnError?.call(details);
+    feedback.reportCrash(details.exception, details.stack);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    feedback.reportCrash(error, stack);
+    return true;
+  };
 
   final toasts = container.read(toastProvider);
   await toasts.init();

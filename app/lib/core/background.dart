@@ -40,6 +40,7 @@ class BackgroundSync {
       await _syncFeed();
       await _syncCertificates();
       await showDueReminders();
+      await ref.read(feedbackProvider).flush().catchError((_) => false);
     } finally {
       _running = false;
     }

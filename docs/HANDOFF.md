@@ -1,4 +1,4 @@
-# Handoff – state of the project (10-Oct-2026)
+# Handoff – state of the project (10-Oct-2026, updated after the tester-readiness work)
 
 For whoever continues this project (and their Claude Code). Start here, then `CLAUDE.md` (standing rules and
 commands) and `docs/decisions.md` (why things are the way they are). Repository:
@@ -10,14 +10,15 @@ dgma.gov.in listing pages, extracts and classifies each circular/notice with **r
 extractive summary (quotes only), and creates alerts for users whose profile matches (department, level, MMD,
 exam grades, ship types, followed topics, certificates held). The app shows those alerts, the documents, an
 archive search and a certificate wallet with expiry reminders, and works offline. **Phase 1 (backend) is
-complete. Phase 2 (Windows app) is built and runs; a few items remain (below).** Phases 3–6 not started.
+complete. Phase 2 (Windows app) is complete and ready for testers except hosting** (see "Next steps").
+Phases 3–6 not started.
 
 ## Status by phase
 | Phase | State |
 |---|---|
 | 0 Plan | Done: `docs/architecture.md`, `schema.sql`, `openapi.yaml`, `screens.md`, `decisions.md` |
 | 1 Backend pipeline + admin | **Done.** 13 sources healthy; 129 tests pass; ruff clean. Admin UI at `/admin` with per-admin accounts (password + TOTP). Not done: Docker compose smoke test (no Docker on the dev machine). |
-| 2 Windows app | **Built and running** (`demo.ps1`). Remaining: 3 widget tests failing, window title rebuild, MSIX installer, tester checkpoint. See "Next steps". |
+| 2 Windows app | **Done, waiting for a server.** All app tests pass, incl. a full UI journey on the real app (`integration_test/`). Tray + start with Windows, single instance, report a problem, crash reports, privacy notice, tester tips, MSIX installer script. |
 | 3–6 | Not started (translations via IndicTrans2, OCR scan, RPSL/vessel checks, sea time/NRI, PDF export, cited search, premium, mobile, launch). |
 
 ## Binding decisions (details in docs/decisions.md)
@@ -56,23 +57,17 @@ Fill the profile; the feed fills with matching real circulars. Admin: http://127
 account first with `python -m sa_backend.admin.manage create you@example.com --role owner`).
 
 ## Next steps (in order)
-1. **Fix the 3 failing widget tests** in `app/test/widgets_test.dart` (domain, certificate-sync and live-API tests
-   pass). Seen so far: "welcome…consent" → `Bad state: No element`; "wallet groups…" → an assertion; "feed card…"
-   failed in the first run. Likely causes to check: the test router/`GoRouterState.of` use in the welcome flow,
-   the wallet test's Drift stream needing `pumpAndSettle`/disposal, and `FeedCardTile` needing a `Card` ancestor
-   theme. Run: `cd app; flutter test --no-pub --timeout 90s test/widgets_test.dart`.
-2. **Rebuild** (`flutter build windows --release`) – window title is already changed to "Seafarer Assistant" in
-   `app/windows/runner/main.cpp` / `Runner.rc` but not yet rebuilt.
-3. **Try every screen by hand** against the local API (checklist in `docs/test-checklist.md`, sections Offline,
-   Certificates, Languages/UI) and fix what you find. Not yet hand-tested: certificate file attach/view, data
-   export, delete account, quiet hours, toast click-through.
-4. **Build the MSIX installer** (`dart run msix:create`) – self-signed for testers; instructions in `app/README.md`.
-   That is the Phase 2 checkpoint ("installable Windows build for testers").
-5. Then Phase 3 (see `docs/architecture.md` and the spec): regional languages (IndicTrans2), OCR scan
-   (Windows.Media.Ocr), RPSL/vessel lists, sea time/NRI calculator, PDF export, cited search, premium gating.
+1. **Owner: hosting decisions** – `docs/hosting-options.md` (recommended: DigitalOcean Bangalore 2 vCPU/4 GB,
+   a `.in` domain, Brevo free email). Also needed: operator name + privacy contact email for the notice.
+2. **Deploy** with `docs/deployment.md` (never run before: expect small fixes; update the runbook).
+3. **Build the tester installer** pointing at the server: `cd app; .\build_tester.ps1 -ApiBase https://api.<domain>`.
+   Install it once on a clean PC following `docs/tester-install-guide.md` (not yet tried end to end).
+4. **Invite 5–10 testers** with the guide and `docs/tester-checklist.md`; watch Admin → Feedback and the dashboard.
+5. Then Phase 3, ordered by tester feedback (candidates: exam countdown cards, RPSL/fake-agency check, regional
+   languages, certificate OCR scan, sea time/NRI, PDF export, plain-language summaries if testers ask).
 
 ## Known issues / limits
-- Windows notifications only appear while the app is running (no FCM on Windows; tray/run-at-login not built yet).
+- Windows notifications need the app running; it now lives in the tray and starts with Windows (no FCM on Windows).
 - Summaries are quotes, not plain language (R1). Indian-language summaries fall back to English (banner shown).
 - 3 PDFs failed processing (one is 45 MB, over the 25 MB cap) – visible in `sa-scraper status`.
 - The Docker deployment files in `infra/` have never been built or run.
@@ -106,3 +101,6 @@ cd app; flutter pub get; dart run build_runner build; flutter test --no-pub; flu
 - 07-Oct-2026: admin UI, deployment files, alert-count bug fix, checkpoint demo (session 2, another machine).
 - 09–10-Oct-2026: Phase 1 completed (R7–R11, reprocess bug, admin TOTP); Phase 2 app written, built and run;
   new-user feed backfill; `demo.ps1`; this handoff (session 3).
+- 10-Oct-2026 (later): tester readiness – widget tests fixed, tray/startup/single instance, feedback + crash
+  reports, privacy notice, tips, MSIX script, full-UI integration test (found and fixed a crash on leaving Archive
+  during a search), hosting options and deployment runbook.

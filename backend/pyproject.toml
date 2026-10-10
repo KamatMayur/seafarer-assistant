@@ -31,4 +31,4 @@ build-backend = "setuptools.build_meta"
 include = ["sa_backend*"]
 
 [tool.setuptools.package-data]
-sa_backend = ["admin/templates/*.html", "admin/static/*"]
+sa_backend = ["admin/templates/*.html", "admin/static/*", "legal/*.md"]

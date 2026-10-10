@@ -58,7 +58,7 @@ class SettingsScreen extends ConsumerWidget {
           leading: Icon(Icons.alarm),
           title: Text('Certificate reminders'),
           subtitle: Text('6 months, 3 months, 1 month, 1 week before expiry, on the day, and when expired. '
-              'Shown as Windows notifications while the app is open.'),
+              'Shown as Windows notifications while the app is running, also from the tray.'),
         ),
         if (desktopShell != null) ...[header('This computer'), const _DesktopSettings()],
         header('Connection'),
@@ -78,7 +78,19 @@ class SettingsScreen extends ConsumerWidget {
           subtitle: Text(ref.read(apiClientProvider).baseUrl),
           onTap: () => _editServer(context, ref),
         ),
+        header('Help'),
+        ListTile(
+          leading: const Icon(Icons.bug_report_outlined),
+          title: const Text('Report a problem or suggest something'),
+          subtitle: const Text('Goes straight to the people running this test'),
+          onTap: () => showDialog(context: context, builder: (_) => const _ReportDialog()),
+        ),
         header('Privacy'),
+        ListTile(
+          leading: const Icon(Icons.policy_outlined),
+          title: const Text('Privacy notice and tester terms'),
+          onTap: () => context.push('/privacy'),
+        ),
         ListTile(
           leading: const Icon(Icons.download_outlined),
           title: const Text('Download my data'),
@@ -293,7 +305,7 @@ class _TopicsDialogState extends ConsumerState<_TopicsDialog> {
                     await ref.read(profileRepoProvider).saveTopics(_modes!);
                     if (context.mounted) Navigator.pop(context);
                   } on ApiException catch (e) {
-                    setState(() => _error = e.message);
+                    if (mounted) setState(() => _error = e.message);
                   }
                 },
           child: const Text('Save'),
@@ -360,4 +372,65 @@ class _DesktopSettingsState extends State<_DesktopSettings> {
         ),
     ]);
   }
+}
+
+
+class _ReportDialog extends ConsumerStatefulWidget {
+  const _ReportDialog();
+
+  @override
+  ConsumerState<_ReportDialog> createState() => _ReportDialogState();
+}
+
+class _ReportDialogState extends ConsumerState<_ReportDialog> {
+  final _text = TextEditingController();
+  String _kind = 'problem';
+  bool _sending = false;
+
+  Future<void> _send() async {
+    if (_text.text.trim().isEmpty) return;
+    setState(() => _sending = true);
+    final sent = await ref.read(feedbackProvider).report(
+      kind: _kind,
+      message: _text.text.trim(),
+      context: {'screen': 'settings'},
+    );
+    if (!mounted) return;
+    Navigator.pop(context);
+    showSnack(context, sent ? 'Thank you, your report was sent.' : 'Saved. It will be sent when you are online.');
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Report a problem'),
+        content: SizedBox(
+          width: 520,
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment(value: 'problem', label: Text('Problem')),
+                ButtonSegment(value: 'idea', label: Text('Suggestion')),
+              ],
+              selected: {_kind},
+              onSelectionChanged: (v) => setState(() => _kind = v.first),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _text,
+              autofocus: true,
+              minLines: 4,
+              maxLines: 10,
+              maxLength: 4000,
+              decoration: const InputDecoration(
+                hintText: 'What happened, and what did you expect? Which circular or screen?',
+              ),
+            ),
+            const Text('The app version is attached. Do not include passwords or certificate numbers.'),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(onPressed: _sending ? null : _send, child: const Text('Send')),
+        ],
+      );
 }

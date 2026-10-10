@@ -24,6 +24,10 @@ class Settings(BaseSettings):
 
     # Auth
     jwt_secret: str = "dev-only-change-me"
+    # Shown in the privacy notice (/privacy). Must be set before real testers sign up.
+    operator_name: str = ""
+    privacy_contact: str = ""
+    hosting_description: str = "a cloud server"
     admin_token: str = ""  # bearer token for /v1/admin/* until the admin UI with TOTP lands (Phase 3)
     cors_origins: list[str] = []
     access_token_minutes: int = 30

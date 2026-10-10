@@ -5,6 +5,7 @@ import '../data/models.dart';
 import '../data/repositories.dart';
 import 'api_client.dart';
 import 'config.dart';
+import 'feedback.dart';
 import 'file_vault.dart';
 import 'notifications.dart';
 import 'token_store.dart';
@@ -27,6 +28,8 @@ final profileRepoProvider =
 final feedRepoProvider = Provider((ref) => FeedRepository(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
 final documentRepoProvider =
     Provider((ref) => DocumentRepository(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
+final feedbackProvider =
+    Provider((ref) => FeedbackService(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
 final certRepoProvider =
     Provider((ref) => CertificateRepository(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
 

@@ -360,6 +360,22 @@ class AdminEvent(Base):
     created_at: Mapped[datetime] = _now()
 
 
+class UserFeedback(Base):
+    """'Report a problem' messages and automatic crash reports from the app. Deleted with the user (DPDP)."""
+
+    __tablename__ = "user_feedback"
+    __table_args__ = (CheckConstraint("kind IN ('problem','idea','crash')", name="feedback_kind_chk"),)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))
+    message: Mapped[str] = mapped_column(Text)
+    app_version: Mapped[str | None] = mapped_column(String(40))
+    platform: Mapped[str | None] = mapped_column(String(40))
+    context: Mapped[dict] = mapped_column(JSONB, default=dict, server_default="{}")  # screen, error type; no PII
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = _now()
+
+
 class AdminAccount(Base):
     """Per-person admin login: password (scrypt) + TOTP. Managed with `python -m sa_backend.admin.manage`."""
 

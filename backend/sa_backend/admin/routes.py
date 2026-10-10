@@ -28,7 +28,9 @@ from sa_backend.db.models import (
     DocumentTag,
     Source,
     User,
+    UserFeedback,
 )
+from sa_backend.db.session import make_sessionmaker
 from sa_backend.services.alerts import create_document_alerts
 from sa_backend.settings import get_settings
 
@@ -59,10 +61,17 @@ AUDIENCES = {
 
 
 def _render(request: Request, name: str, sid: str | None, **ctx) -> HTMLResponse:
+    open_feedback = 0
+    if sid:
+        with make_sessionmaker()() as s:
+            open_feedback = s.scalar(
+                select(func.count()).select_from(UserFeedback).where(UserFeedback.resolved_at.is_(None))
+            )
     ctx |= {
         "csrf": auth.csrf_for(sid) if sid else "",
         "unofficial": reference.UNOFFICIAL,
         "admin": getattr(request.state, "admin", None),
+        "open_feedback": open_feedback,
     }
     return templates.TemplateResponse(request, name, ctx)
 
@@ -342,3 +351,24 @@ async def save_document(request: Request, doc_id: uuid.UUID, db: DB, _: Session_
 def audit_log(request: Request, db: DB, sid: Session_) -> HTMLResponse:
     rows = db.scalars(select(AdminAuditLog).order_by(AdminAuditLog.id.desc()).limit(200)).all()
     return _render(request, "audit.html", sid, rows=rows)
+
+
+# ---------------------------------------------------------------- tester feedback
+@router.get("/feedback", response_class=HTMLResponse)
+def feedback(request: Request, db: DB, sid: Session_, show: str = "") -> HTMLResponse:
+    q = select(UserFeedback, User.email).join(User, User.id == UserFeedback.user_id)
+    if show != "all":
+        q = q.where(UserFeedback.resolved_at.is_(None))
+    rows = db.execute(q.order_by(UserFeedback.id.desc()).limit(200)).all()
+    return _render(request, "feedback.html", sid, rows=rows, show_all=show == "all")
+
+
+@router.post("/feedback/{feedback_id}/resolve", dependencies=[Csrf])
+def resolve_feedback(feedback_id: int, request: Request, db: DB, _: Session_) -> Response:
+    f = db.get(UserFeedback, feedback_id)
+    if f is None:
+        raise HTTPException(404)
+    if f.resolved_at is None:
+        f.resolved_at = datetime.now(UTC)
+        _audit(request, db, "feedback.resolve", str(feedback_id))
+    return RedirectResponse("/admin/feedback", status_code=303)

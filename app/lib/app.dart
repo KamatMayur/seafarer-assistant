@@ -9,6 +9,7 @@ import 'features/onboarding/profile_setup_screen.dart';
 import 'features/onboarding/sign_in_screen.dart';
 import 'features/onboarding/welcome_screen.dart';
 import 'features/search/search_screen.dart';
+import 'features/settings/privacy_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/wallet/certificate_form_screen.dart';
 import 'features/wallet/wallet_screen.dart';
@@ -31,6 +32,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final session = ref.read(sessionProvider);
       final loc = state.matchedLocation;
+      if (loc == '/privacy') return null; // readable before and after sign-in
       final inOnboarding = loc == '/welcome' || loc == '/sign-in';
       switch (session) {
         case SessionState.loading:
@@ -46,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/loading', builder: (_, _) => const _Loading()),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
+      GoRoute(path: '/privacy', builder: (_, _) => const PrivacyScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/setup', builder: (_, _) => const ProfileSetupScreen()),
       ShellRoute(
