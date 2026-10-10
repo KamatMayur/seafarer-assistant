@@ -11,6 +11,7 @@ import 'package:seafarer_assistant/core/config.dart';
 import 'package:seafarer_assistant/core/providers.dart';
 import 'package:seafarer_assistant/data/db.dart';
 import 'package:seafarer_assistant/data/models.dart';
+import 'package:seafarer_assistant/domain/expiry.dart';
 import 'package:seafarer_assistant/domain/feed_grouping.dart';
 import 'package:seafarer_assistant/features/feed/feed_screen.dart';
 import 'package:seafarer_assistant/features/onboarding/welcome_screen.dart';
@@ -27,6 +28,10 @@ Widget _wrap(Widget child, {List<Override> overrides = const []}) {
 
 void main() {
   testWidgets('welcome: shows the unofficial notice and needs consent before continuing', (tester) async {
+    // Tall window: list items below the fold are not built, so the Continue button must be on screen.
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(_wrap(const WelcomeScreen()));
     expect(find.text(AppConfig.unofficialNotice), findsOneWidget);
     final button = find.widgetWithText(FilledButton, 'Continue');
@@ -52,12 +57,8 @@ void main() {
 
   testWidgets('wallet groups certificates by expiry status', (tester) async {
     final db = AppDatabase(NativeDatabase.memory());
-    addTearDown(db.close);
-    final today = DateTime.now();
-    String day(int offset) {
-      final d = today.add(Duration(days: offset));
-      return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-    }
+    final today = todayIst(); // the wallet groups by India date, whatever the machine's timezone
+    String day(int offset) => formatDay(today.add(Duration(days: offset)));
 
     Future<void> add(String id, String type, String? expiry) => db.into(db.certificates).insert(
         CertificatesCompanion.insert(id: id, type: type, expiryDate: Value(expiry), updatedAt: DateTime.now()));
@@ -78,7 +79,13 @@ void main() {
     expect(find.text('VALID (1)'), findsOneWidget);
     expect(find.text('NO EXPIRY DATE (1)'), findsOneWidget);
     expect(find.textContaining('Expired 3 days ago'), findsOneWidget);
-    expect(find.text('not synced yet'), findsWidgets);
+    expect(find.textContaining('not synced yet'), findsWidgets);
+
+    // Unmount so Drift's live query is cancelled, then close the database outside the fake test clock
+    // (closing inside it never completes and hangs the following tests).
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(seconds: 1));
+    await tester.runAsync(db.close);
   });
 
   testWidgets('feed card shows critical badge, why, and certificate flag on one card', (tester) async {

@@ -123,7 +123,6 @@ class FeedCardTile extends StatelessWidget {
         : DocumentCard.fromJson(jsonDecode(row.documentJson!) as Map<String, dynamic>);
     final unread = card.unread;
     final title = doc?.title ?? (card.main.kind == 'cert_expiry' ? 'Certificate expiry reminder' : 'Notice');
-    final impactReason = card.impacts.isNotEmpty ? card.impacts.first.reason : null;
 
     return Card(
       color: selected ? cs.secondaryContainer : null,
@@ -178,7 +177,7 @@ class FeedCardTile extends StatelessWidget {
                       style: t.labelMedium?.copyWith(color: cs.error)),
                 ]),
               ),
-            if (impactReason != null || card.main.kind == 'cert_impact')
+            if (card.affectsCertificate)
               Padding(
                 padding: const EdgeInsets.only(top: 6),
                 child: Row(children: [
