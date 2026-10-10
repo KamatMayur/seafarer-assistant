@@ -1,5 +1,6 @@
 #include "flutter_window.h"
 
+#include <cwchar>
 #include <optional>
 
 #include "flutter/generated_plugin_registrant.h"
@@ -27,8 +28,12 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
-  flutter_controller_->engine()->SetNextFrameCallback([&]() {
-    this->Show();
+  // Started with Windows (--minimized): stay in the system tray until the user opens the app.
+  const bool start_hidden = wcsstr(GetCommandLineW(), L"--minimized") != nullptr;
+  flutter_controller_->engine()->SetNextFrameCallback([this, start_hidden]() {
+    if (!start_hidden) {
+      this->Show();
+    }
   });
 
   // Flutter can complete the first frame before the "show window" callback is

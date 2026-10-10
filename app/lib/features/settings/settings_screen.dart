@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
 import '../../core/background.dart';
 import '../../core/config.dart';
+import '../../core/desktop.dart';
 import '../../core/providers.dart';
 import '../../data/models.dart';
 import '../../widgets/common.dart';
@@ -58,6 +60,7 @@ class SettingsScreen extends ConsumerWidget {
           subtitle: Text('6 months, 3 months, 1 month, 1 week before expiry, on the day, and when expired. '
               'Shown as Windows notifications while the app is open.'),
         ),
+        if (desktopShell != null) ...[header('This computer'), const _DesktopSettings()],
         header('Connection'),
         SwitchListTile(
           secondary: const Icon(Icons.data_saver_on),
@@ -297,5 +300,64 @@ class _TopicsDialogState extends ConsumerState<_TopicsDialog> {
         ),
       ],
     );
+  }
+}
+
+
+/// Tray and start-with-Windows switches (Windows only).
+class _DesktopSettings extends StatefulWidget {
+  const _DesktopSettings();
+
+  @override
+  State<_DesktopSettings> createState() => _DesktopSettingsState();
+}
+
+class _DesktopSettingsState extends State<_DesktopSettings> {
+  bool? _startup;
+
+  @override
+  void initState() {
+    super.initState();
+    StartupService.isEnabled().then((v) {
+      if (mounted) setState(() => _startup = v);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shell = desktopShell!;
+    return Column(children: [
+      SwitchListTile(
+        secondary: const Icon(Icons.vertical_align_bottom),
+        title: const Text('Keep running in the system tray when closed'),
+        subtitle: const Text('New alerts and expiry reminders keep arriving. Quit from the tray icon menu.'),
+        value: shell.keepInTray,
+        onChanged: (v) async {
+          await shell.setKeepInTray(v);
+          setState(() {});
+        },
+      ),
+      if (StartupService.isPackaged)
+        ListTile(
+          leading: const Icon(Icons.power_settings_new),
+          title: const Text('Start with Windows'),
+          subtitle: const Text('On by default. Change it in Windows Settings > Apps > Startup.'),
+          onTap: () => launchUrl(Uri.parse('ms-settings:startupapps')),
+        )
+      else
+        SwitchListTile(
+          secondary: const Icon(Icons.power_settings_new),
+          title: const Text('Start with Windows'),
+          subtitle: const Text('Opens in the system tray when you sign in to Windows.'),
+          value: _startup ?? false,
+          onChanged: _startup == null
+              ? null
+              : (v) async {
+                  await StartupService.setEnabled(v);
+                  final now = await StartupService.isEnabled();
+                  if (mounted) setState(() => _startup = now);
+                },
+        ),
+    ]);
   }
 }
