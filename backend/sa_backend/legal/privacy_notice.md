@@ -15,7 +15,8 @@ or the Government of India**. Always verify any information with the official ci
 | Problem reports you send, and automatic crash reports (error message and app version, no personal data) | To fix bugs |
 | Your consents (what you agreed to, and when) | Required by law |
 
-**Certificate scans and photos are never uploaded.** They stay on your device, encrypted.
+**Certificate scans and photos are never uploaded.** They stay on your device, encrypted. When you attach one, the
+app reads its text on your device to fill in the form; that text is not kept or sent anywhere.
 
 We do **not** collect your DG Shipping / e-Samudra / e-NAVIK passwords, contacts, location or phone number. We do
 not sell or share your data, and there is no advertising.

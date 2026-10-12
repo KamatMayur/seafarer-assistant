@@ -18,7 +18,7 @@ Phases 3–6 not started.
 |---|---|
 | 0 Plan | Done: `docs/architecture.md`, `schema.sql`, `openapi.yaml`, `screens.md`, `decisions.md` |
 | 1 Backend pipeline + admin | **Done.** 13 sources healthy; 129 tests pass; ruff clean. Admin UI at `/admin` with per-admin accounts (password + TOTP). Not done: Docker compose smoke test (no Docker on the dev machine). |
-| 2 Windows app | **Done, waiting for a server.** All app tests pass, incl. a full UI journey on the real app (`integration_test/`). Tray + start with Windows, single instance, report a problem, crash reports, privacy notice, tester tips, MSIX installer script. |
+| 2 Windows app | **Done, waiting for a server.** All app tests pass, incl. a full UI journey on the real app (`integration_test/`). Tray + start with Windows, single instance, report a problem, crash reports, privacy notice, tester tips, MSIX installer script. Certificate scan reading (on-device Windows OCR, R12). |
 | 3–6 | Not started (translations via IndicTrans2, OCR scan, RPSL/vessel checks, sea time/NRI, PDF export, cited search, premium, mobile, launch). |
 
 ## Binding decisions (details in docs/decisions.md)
@@ -65,7 +65,7 @@ account first with `python -m sa_backend.admin.manage create you@example.com --r
    Install it once on a clean PC following `docs/tester-install-guide.md` (not yet tried end to end).
 4. **Invite 5–10 testers** with the guide and `docs/tester-checklist.md`; watch Admin → Feedback and the dashboard.
 5. Then Phase 3, ordered by tester feedback (candidates: exam countdown cards, RPSL/fake-agency check, regional
-   languages, certificate OCR scan, sea time/NRI, PDF export, plain-language summaries if testers ask).
+   languages, sea time/NRI, PDF export, plain-language summaries if testers ask).
 
 ## Known issues / limits
 - Windows notifications need the app running; it now lives in the tray and starts with Windows (no FCM on Windows).
@@ -105,3 +105,5 @@ cd app; flutter pub get; dart run build_runner build; flutter test --no-pub; flu
 - 10-Oct-2026 (later): tester readiness – widget tests fixed, tray/startup/single instance, feedback + crash
   reports, privacy notice, tips, MSIX script, full-UI integration test (found and fixed a crash on leaving Archive
   during a search), hosting options and deployment runbook.
+- 12-Oct-2026: "I already have an account" sign-in (re-sign-in no longer overwrites consents); certificate scan
+  reading with Windows' built-in OCR (R12), checked on a FAKE certificate image and PDF.

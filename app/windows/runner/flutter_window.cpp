@@ -26,6 +26,7 @@ bool FlutterWindow::OnCreate() {
     return false;
   }
   RegisterPlugins(flutter_controller_->engine());
+  ocr_channel_ = std::make_unique<OcrChannel>(flutter_controller_->engine()->messenger(), GetHandle());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   // Started with Windows (--minimized): stay in the system tray until the user opens the app.
@@ -45,6 +46,7 @@ bool FlutterWindow::OnCreate() {
 }
 
 void FlutterWindow::OnDestroy() {
+  ocr_channel_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;
   }
@@ -64,6 +66,10 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     if (result) {
       return *result;
     }
+  }
+
+  if (ocr_channel_ && ocr_channel_->HandleMessage(message, wparam)) {
+    return 0;
   }
 
   switch (message) {

@@ -11,8 +11,10 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/api_client.dart';
 import '../../core/background.dart';
+import '../../core/ocr.dart';
 import '../../core/providers.dart';
 import '../../data/db.dart';
+import '../../domain/certificate_scan.dart';
 import '../../domain/expiry.dart';
 import '../../widgets/common.dart';
 
@@ -38,6 +40,9 @@ class _CertificateFormScreenState extends ConsumerState<CertificateFormScreen> {
   Certificate? _existing;
   bool _loading = true, _saving = false;
   List<Map<String, dynamic>> _linked = [];
+  bool _reading = false;
+  bool _typeChosen = false; // the user picked a type: a scan does not change it
+  String? _scanNote; // what was filled from the scan, or why nothing was
 
   bool get _isNew => widget.certificateId == null;
 
@@ -94,6 +99,56 @@ class _CertificateFormScreenState extends ConsumerState<CertificateFormScreen> {
       setState(() {
         _newFile = File(path);
         _fileName = files.single.name;
+      });
+      await _readScan(path);
+    }
+  }
+
+  /// Reads the scan on this device and fills only the fields that are still empty (R12). The text is not kept.
+  Future<void> _readScan(String path) async {
+    final ocr = ref.read(ocrProvider);
+    if (!ocr.available) return;
+    setState(() {
+      _reading = true;
+      _scanNote = null;
+    });
+    String note;
+    try {
+      final g = readCertificateText(await ocr.readText(path));
+      final filled = <String>[];
+      final types = ref.read(metaProvider).value?.certTypes;
+      if (g.type != null && _isNew && !_typeChosen && (types == null || types.containsKey(g.type))) {
+        _type = g.type!;
+        filled.add('type');
+      }
+      void fill(TextEditingController c, String? v, String label) {
+        if (v != null && c.text.trim().isEmpty) {
+          c.text = v;
+          filled.add(label);
+        }
+      }
+
+      fill(_subtype, g.subtype, 'grade/course');
+      fill(_number, g.number, 'number');
+      fill(_authority, g.authority, 'issued by');
+      if (g.issue != null && _issue == null) {
+        _issue = g.issue;
+        filled.add('issue date');
+      }
+      if (g.expiry != null && _expiry == null && !_noExpiry) {
+        _expiry = g.expiry;
+        filled.add('expiry date');
+      }
+      note = filled.isEmpty
+          ? 'Could not read the details from this file. Please enter them by hand.'
+          : 'Filled from the scan: ${filled.join(', ')}. Check each one against your certificate before saving.';
+    } catch (_) {
+      note = 'Could not read this file. Please enter the details by hand.';
+    }
+    if (mounted) {
+      setState(() {
+        _reading = false;
+        _scanNote = note;
       });
     }
   }
@@ -200,7 +255,10 @@ class _CertificateFormScreenState extends ConsumerState<CertificateFormScreen> {
                     DropdownButtonFormField<String>(
                       initialValue: types.containsKey(_type) ? _type : null,
                       items: [for (final e in types.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
-                      onChanged: (v) => setState(() => _type = v ?? 'other'),
+                      onChanged: (v) => setState(() {
+                        _type = v ?? 'other';
+                        _typeChosen = true;
+                      }),
                       decoration: const InputDecoration(labelText: 'Type *'),
                     ),
                     const SizedBox(height: 12),
@@ -240,7 +298,8 @@ class _CertificateFormScreenState extends ConsumerState<CertificateFormScreen> {
                     ]),
                     const SizedBox(height: 20),
                     Text('Scan or photo (optional)', style: Theme.of(context).textTheme.titleSmall),
-                    const Text('Stored only on this device, encrypted. Never uploaded.'),
+                    const Text('Stored only on this device, encrypted. Never uploaded. The app reads the details '
+                        'from it on this device and fills in the empty fields for you to check.'),
                     const SizedBox(height: 8),
                     Wrap(spacing: 12, children: [
                       OutlinedButton.icon(
@@ -251,6 +310,20 @@ class _CertificateFormScreenState extends ConsumerState<CertificateFormScreen> {
                       if (_fileName != null)
                         TextButton.icon(icon: const Icon(Icons.visibility), label: Text(_fileName!), onPressed: _viewFile),
                     ]),
+                    if (_reading)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Row(children: [
+                          SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                          SizedBox(width: 8),
+                          Text('Reading the details from the file…'),
+                        ]),
+                      ),
+                    if (_scanNote != null)
+                      Card(
+                        margin: const EdgeInsets.only(top: 8),
+                        child: ListTile(leading: const Icon(Icons.document_scanner_outlined), title: Text(_scanNote!)),
+                      ),
                     if (_linked.isNotEmpty) ...[
                       const SizedBox(height: 24),
                       Text('Circulars that may affect this certificate', style: Theme.of(context).textTheme.titleSmall),
