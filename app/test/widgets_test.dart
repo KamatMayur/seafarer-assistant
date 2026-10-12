@@ -44,6 +44,16 @@ void main() {
     expect(find.text('SIGN IN PAGE'), findsOneWidget);
   });
 
+  testWidgets('welcome: existing users can go straight to sign in without the consent form', (tester) async {
+    tester.view.physicalSize = const Size(1000, 1600);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_wrap(const WelcomeScreen()));
+    await tester.tap(find.text('I already have an account – sign in'));
+    await tester.pumpAndSettle();
+    expect(find.text('SIGN IN PAGE'), findsOneWidget);
+  });
+
   testWidgets('welcome: long text at 200% scale does not overflow', (tester) async {
     tester.view.physicalSize = const Size(800, 1400);
     tester.view.devicePixelRatio = 1;

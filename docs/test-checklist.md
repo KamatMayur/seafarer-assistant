@@ -34,6 +34,7 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | A12 | Same TOTP code used twice | Second use rejected (replay) | test_totp_rejects_replay_and_old_codes |
 | A13 | Tester sends a report / the app crashes | Appears under Admin → Feedback; deleted with the account | test_api::test_feedback_and_crash_reports |
 | A14 | Unexpected server error | 500 with a generic message; admin event recorded | test_api::test_unexpected_errors_are_reported |
+| A15 | Existing user taps "I already have an account" and signs in | Signed in without the consent form; earlier consents (incl. email alerts) unchanged; unknown email → "no account yet" + link to create one | test_api::test_existing_user_signs_in_without_consents_and_keeps_them, widgets_test |
 
 ## App (Phase 2)
 | # | Case | Auto |

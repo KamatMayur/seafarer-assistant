@@ -49,6 +49,18 @@ def test_signup_requires_consent(client, caplog):
     assert r.status_code == 400
 
 
+def test_existing_user_signs_in_without_consents_and_keeps_them(client, caplog, db):
+    from sa_backend.db.models import Consent
+
+    email_ok = {"purpose": "email_alerts", "granted": True, "policy_version": "draft-0.1"}
+    first = login(client, caplog, email="back@example.com", consents=[*CONSENT, email_ok])
+    again = login(client, caplog, email="back@example.com", consents=[])  # "I already have an account"
+    assert first["new_user"] is True and again["new_user"] is False
+    with db() as s:
+        rows = s.scalars(select(Consent).join(User).where(User.email == "back@example.com")).all()
+    assert sorted((c.purpose, c.granted) for c in rows) == [("core_service", True), ("email_alerts", True)]
+
+
 def test_wrong_code_and_rate_limit(client):
     for _ in range(5):
         assert client.post("/v1/auth/email/start", json={"email": "y@example.com"}).status_code == 202

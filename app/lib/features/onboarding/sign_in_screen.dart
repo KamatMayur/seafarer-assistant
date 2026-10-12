@@ -6,6 +6,14 @@ import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/api_client.dart';
 import '../../core/providers.dart';
 
+/// How the sign-in screen was opened: from the welcome screen's consent form (new account) or from
+/// "I already have an account" (no consents sent, so an existing user's earlier choices stay as they were).
+class SignInArgs {
+  const SignInArgs({required this.newAccount, this.emailAlerts = false});
+  final bool newAccount;
+  final bool emailAlerts;
+}
+
 /// S2: email -> 6-digit code. Consent from the welcome screen is sent with the first sign-in.
 class SignInScreen extends ConsumerStatefulWidget {
   const SignInScreen({super.key});
@@ -20,18 +28,31 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _codeSent = false;
   bool _busy = false;
   String? _error;
+  bool _noAccount = false;
 
-  bool get _emailConsent => GoRouterState.of(context).extra == true;
+  SignInArgs get _args {
+    final extra = GoRouterState.of(context).extra;
+    return extra is SignInArgs ? extra : const SignInArgs(newAccount: false);
+  }
 
   Future<void> _run(Future<void> Function() action) async {
     setState(() {
       _busy = true;
       _error = null;
+      _noAccount = false;
     });
     try {
       await action();
     } on ApiException catch (e) {
-      if (mounted) setState(() => _error = e.message);
+      if (!mounted) return;
+      if (e.status == 400 && !_args.newAccount) {
+        setState(() {
+          _noAccount = true;
+          _error = 'There is no account for this email yet.';
+        });
+      } else {
+        setState(() => _error = e.message);
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -44,7 +65,9 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
 
   Future<void> _verify() => _run(() async {
         final auth = ref.read(authRepoProvider);
-        await auth.verify(_email.text.trim(), _code.text.trim(), consentCore: true, consentEmail: _emailConsent);
+        final args = _args;
+        await auth.verify(_email.text.trim(), _code.text.trim(),
+            consentCore: args.newAccount, consentEmail: args.emailAlerts);
         try {
           await auth.registerDevice((await PackageInfo.fromPlatform()).version);
         } catch (_) {}
@@ -55,7 +78,10 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign in')),
+      appBar: AppBar(
+        title: Text(_args.newAccount ? 'Create your account' : 'Sign in'),
+        leading: BackButton(onPressed: () => context.go('/welcome')),
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 440),
@@ -91,6 +117,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               Padding(
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ),
+            if (_noAccount)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => context.go('/welcome'),
+                  child: const Text('Create an account (accept the privacy policy first)'),
+                ),
               ),
             const SizedBox(height: 16),
             FilledButton(

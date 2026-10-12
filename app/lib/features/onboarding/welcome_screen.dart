@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/config.dart';
+import 'sign_in_screen.dart';
 
 /// S1: what the app is, the unofficial notice, and consent (DPDP Act 2023: explicit, per purpose).
 class WelcomeScreen extends StatefulWidget {
@@ -71,8 +72,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             ),
             const SizedBox(height: 16),
             FilledButton(
-              onPressed: _core ? () => context.go('/sign-in', extra: _email) : null,
+              onPressed: _core
+                  ? () => context.go('/sign-in', extra: SignInArgs(newAccount: true, emailAlerts: _email))
+                  : null,
               child: const Padding(padding: EdgeInsets.all(12), child: Text('Continue')),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => context.go('/sign-in', extra: const SignInArgs(newAccount: false)),
+              child: const Text('I already have an account – sign in'),
             ),
           ]),
         ),

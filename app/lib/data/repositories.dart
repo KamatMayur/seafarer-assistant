@@ -21,14 +21,17 @@ class AuthRepository {
 
   Future<void> startEmailLogin(String email) => api.post('/v1/auth/email/start', body: {'email': email}, auth: false);
 
-  /// Returns true for a new account.
+  /// Returns true for a new account. Without [consentCore] (an existing user signing in) no consents are sent, so
+  /// earlier choices are not overwritten; the server then refuses an email that has no account yet (400).
   Future<bool> verify(String email, String code, {required bool consentCore, required bool consentEmail}) async {
     final j = await api.post('/v1/auth/verify', auth: false, body: {
       'identifier': email,
       'code': code,
       'consents': [
-        {'purpose': 'core_service', 'granted': consentCore, 'policy_version': AppConfig.privacyPolicyVersion},
-        {'purpose': 'email_alerts', 'granted': consentEmail, 'policy_version': AppConfig.privacyPolicyVersion},
+        if (consentCore) ...[
+          {'purpose': 'core_service', 'granted': true, 'policy_version': AppConfig.privacyPolicyVersion},
+          {'purpose': 'email_alerts', 'granted': consentEmail, 'policy_version': AppConfig.privacyPolicyVersion},
+        ],
       ],
     }) as Map<String, dynamic>;
     await api.tokens.save(j['access_token'] as String, j['refresh_token'] as String);
