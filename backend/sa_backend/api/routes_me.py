@@ -5,10 +5,11 @@ import json
 import zipfile
 from datetime import UTC, datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 from sqlalchemy import delete, select
 
+from sa_backend import reference
 from sa_backend.api.deps import DB, CurrentUser
 from sa_backend.api.schemas import DeviceIn, Profile, ProfileUpdate, QuietHours, TopicPref
 from sa_backend.db.models import (
@@ -67,6 +68,14 @@ def get_me(user: CurrentUser) -> Profile:
 @router.patch("", response_model=Profile)
 def update_me(body: ProfileUpdate, user: CurrentUser, db: DB) -> Profile:
     data = body.model_dump(exclude_unset=True)
+    if data.keys() & {"department", "level", "rank", "exam_grades"}:
+        # Check the profile as it will be after this change (e.g. a new department with the old rank).
+        merged = {k: data.get(k, getattr(user, k)) for k in ("department", "level", "rank", "exam_grades")}
+        problems = reference.profile_problems(
+            merged["department"], merged["level"], merged["rank"], merged["exam_grades"] or []
+        )
+        if problems:
+            raise HTTPException(422, "; ".join(problems))
     if "quiet_hours" in data:
         q = body.quiet_hours
         user.quiet_start_min = _minutes(q.start) if q else None

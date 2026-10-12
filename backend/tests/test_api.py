@@ -10,7 +10,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
+from sa_backend import reference
 from sa_backend.db.models import Alert, Certificate, Document, DocumentSummary, DocumentTag, Source, User
+from sa_backend.services.matching import GRADE_DEPARTMENT
 
 CONSENT = [{"purpose": "core_service", "granted": True, "policy_version": "draft-0.1"}]
 
@@ -338,3 +340,48 @@ def test_unexpected_errors_are_reported(db, monkeypatch):
     assert r.status_code == 500 and "reported" in r.json()["detail"]
     with db() as s:
         assert "RuntimeError" in s.scalar(select(AdminEvent.message))
+
+
+# Department, level, rank and exam grades must agree with each other (reference.py + PATCH /v1/me).
+def test_reference_tables_are_complete_and_consistent():
+    for dept, ranks in reference.RANKS.items():
+        for rank in ranks:
+            if rank != "Other":
+                assert rank in reference.RANK_LEVEL, rank
+                assert reference.RANK_LEVEL[rank] in reference.DEPARTMENT_LEVELS[dept], rank
+    for dept, grades in reference.DEPARTMENT_EXAM_GRADES.items():
+        assert set(grades) <= set(reference.EXAM_GRADES), dept
+        for g in grades:  # matching's grade -> department map agrees (NCV fits deck and engine)
+            assert GRADE_DEPARTMENT.get(g, dept) == dept or dept == "other" or g == "dredge", (dept, g)
+    for rank, held in reference.RANK_HELD_GRADES.items():
+        dept = next(d for d, ranks in reference.RANKS.items() if rank in ranks)
+        assert set(held) <= set(reference.DEPARTMENT_EXAM_GRADES[dept]), rank
+    assert reference.DEPARTMENT_LEVELS["catering"] == ["rating"]
+    assert reference.DEPARTMENT_LEVELS["other"] == list(reference.LEVELS)
+
+
+@pytest.mark.parametrize(
+    ("profile", "problem"),
+    [
+        ({"department": "engine", "level": "cadet", "rank": "Chief Engineer"}, "not a cadet / trainee rank"),
+        ({"department": "engine", "level": "officer", "rank": "Master"}, "not a rank in Engine"),
+        ({"department": "catering", "level": "officer"}, "not a level in Catering"),
+        ({"department": "deck", "level": "officer", "exam_grades": ["meo_class_2"]}, "not an exam for Deck"),
+    ],
+)
+def test_contradictions_are_rejected(client, caplog, profile, problem):
+    tokens = login(client, caplog)
+    r = client.patch("/v1/me", headers=auth(tokens), json=profile)
+    assert r.status_code == 422 and problem in r.text, r.text
+
+
+def test_changing_department_with_the_old_rank_is_rejected_but_consistent_changes_work(client, caplog):
+    tokens = login(client, caplog)
+    ok = {"department": "engine", "level": "cadet", "rank": "Engine Cadet", "exam_grades": ["meo_class_4"]}
+    assert client.patch("/v1/me", headers=auth(tokens), json=ok).status_code == 200
+    r = client.patch("/v1/me", headers=auth(tokens), json={"department": "deck"})
+    assert r.status_code == 422 and "Engine Cadet is not a rank in Deck" in r.text
+    moved = {"department": "deck", "level": "cadet", "rank": "Deck Cadet", "exam_grades": ["second_mate"]}
+    assert client.patch("/v1/me", headers=auth(tokens), json=moved).status_code == 200
+    # Fields unrelated to the profile rules still save without re-sending everything.
+    assert client.patch("/v1/me", headers=auth(tokens), json={"name": "FAKE"}).status_code == 200

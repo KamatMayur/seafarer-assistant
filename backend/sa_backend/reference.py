@@ -27,6 +27,39 @@ RANKS = {
     "catering": ["Chief Cook", "Cook", "Steward", "Messman"],
     "other": ["Other"],
 }
+# Which level each rank belongs to. Picking a rank sets the level; a level only offers its own ranks.
+RANK_LEVEL = {
+    "Master": "officer",
+    "Chief Officer": "officer",
+    "Second Officer": "officer",
+    "Third Officer": "officer",
+    "Deck Cadet": "cadet",
+    "Bosun": "rating",
+    "AB": "rating",
+    "OS": "rating",
+    "Chief Engineer": "officer",
+    "Second Engineer": "officer",
+    "Third Engineer": "officer",
+    "Fourth Engineer": "officer",
+    "Junior Engineer": "cadet",
+    "Engine Cadet": "cadet",
+    "Fitter": "rating",
+    "Motorman": "rating",
+    "Oiler": "rating",
+    "Wiper": "rating",
+    "ETO": "officer",
+    "Electrical Cadet": "cadet",
+    "Electrician": "rating",
+    "Chief Cook": "rating",
+    "Cook": "rating",
+    "Steward": "rating",
+    "Messman": "rating",
+}
+# Levels each department offers (derived from its ranks; "other" allows every level).
+DEPARTMENT_LEVELS = {
+    dept: [lvl for lvl in LEVELS if dept == "other" or any(RANK_LEVEL.get(r) == lvl for r in ranks)]
+    for dept, ranks in RANKS.items()
+}
 SHIP_TYPES = {
     "tanker": "Tanker (oil / chemical / gas)",
     "bulk": "Bulk carrier",
@@ -67,6 +100,46 @@ EXAM_GRADES = {
     "signal": "Signal exam",
     "dredge": "Dredge grades",
 }
+# Exams a department can prepare for ("other": all of them).
+DEPARTMENT_EXAM_GRADES = {
+    "deck": ["second_mate", "chief_mate", "master", "gmdss", "signal", "ncv", "dredge"],
+    "engine": ["meo_class_4", "meo_class_3", "meo_class_2", "meo_class_1", "ncv", "dredge"],
+    "electrical": ["eto"],
+    "catering": [],
+    "other": list(EXAM_GRADES),
+}
+# Certificates a rank normally already holds, so those exams are not offered again.
+RANK_HELD_GRADES = {
+    "Master": ["second_mate", "chief_mate", "master", "gmdss", "signal"],
+    "Chief Officer": ["second_mate", "chief_mate", "gmdss", "signal"],
+    "Second Officer": ["second_mate", "gmdss", "signal"],
+    "Third Officer": ["second_mate", "gmdss", "signal"],
+    "Chief Engineer": ["meo_class_4", "meo_class_3", "meo_class_2", "meo_class_1"],
+    "Second Engineer": ["meo_class_4", "meo_class_3", "meo_class_2"],
+    "Third Engineer": ["meo_class_4"],
+    "Fourth Engineer": ["meo_class_4"],
+    "ETO": ["eto"],
+}
+
+
+def profile_problems(department: str | None, level: str | None, rank: str | None, grades: list[str]) -> list[str]:
+    """Contradictions between profile fields (empty list = consistent). Shared by the API and its tests."""
+    problems = []
+    if department and level and level not in DEPARTMENT_LEVELS[department]:
+        problems.append(f"{LEVELS[level]} is not a level in {DEPARTMENTS[department]}")
+    if rank:
+        if department and rank not in RANKS[department]:
+            problems.append(f"{rank} is not a rank in {DEPARTMENTS[department]}")
+        if level and RANK_LEVEL.get(rank, level) != level:
+            problems.append(f"{rank} is not a {LEVELS[level].lower()} rank")
+    if department:
+        wrong = sorted(set(grades) - set(DEPARTMENT_EXAM_GRADES[department]))
+        if wrong:
+            names = ", ".join(EXAM_GRADES[g] for g in wrong)
+            problems.append(f"{names} is not an exam for {DEPARTMENTS[department]}")
+    return problems
+
+
 TOPICS = {
     "exams": "Exams",
     "training": "Training & courses",

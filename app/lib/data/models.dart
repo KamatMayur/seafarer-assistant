@@ -212,7 +212,11 @@ class Meta {
   Meta.fromJson(Map<String, dynamic> j)
       : departments = _m(j['departments']),
         levels = _m(j['levels']),
-        ranks = (j['ranks'] as Map<String, dynamic>? ?? {}).map((k, v) => MapEntry(k, (v as List).cast<String>())),
+        ranks = _lists(j['ranks']),
+        rankLevel = _m(j['rank_level']),
+        departmentLevels = _lists(j['department_levels']),
+        departmentExamGrades = _lists(j['department_exam_grades']),
+        rankHeldGrades = _lists(j['rank_held_grades']),
         shipTypes = _m(j['ship_types']),
         mmds = _m(j['mmds']),
         examGrades = _m(j['exam_grades']),
@@ -221,10 +225,18 @@ class Meta {
         languages = _m(j['languages']);
 
   static Map<String, String> _m(Object? v) => (v as Map<String, dynamic>? ?? {}).cast<String, String>();
+  static Map<String, List<String>> _lists(Object? v) =>
+      (v as Map<String, dynamic>? ?? {}).map((k, v) => MapEntry(k, (v as List).cast<String>()));
 
   final Map<String, String> departments;
   final Map<String, String> levels;
   final Map<String, List<String>> ranks;
+  /// Rank -> level ('officer' / 'rating' / 'cadet'). Ranks not listed (e.g. "Other") fit any level.
+  final Map<String, String> rankLevel;
+  final Map<String, List<String>> departmentLevels;
+  final Map<String, List<String>> departmentExamGrades;
+  /// Exams a rank has normally already passed, so they are not offered.
+  final Map<String, List<String>> rankHeldGrades;
   final Map<String, String> shipTypes;
   final Map<String, String> mmds;
   final Map<String, String> examGrades;

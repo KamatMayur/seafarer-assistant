@@ -107,3 +107,4 @@ cd app; flutter pub get; dart run build_runner build; flutter test --no-pub; flu
   during a search), hosting options and deployment runbook.
 - 12-Oct-2026: "I already have an account" sign-in (re-sign-in no longer overwrites consents); certificate scan
   reading with Windows' built-in OCR (R12), checked on a FAKE certificate image and PDF.
+- 12-Oct-2026: profile fields depend on each other (department -> level -> rank -> exams, R13), checked by the API.

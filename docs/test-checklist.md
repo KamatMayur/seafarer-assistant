@@ -36,6 +36,7 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | A14 | Unexpected server error | 500 with a generic message; admin event recorded | test_api::test_unexpected_errors_are_reported |
 | A15 | Existing user taps "I already have an account" and signs in | Signed in without the consent form; earlier consents (incl. email alerts) unchanged; unknown email → "no account yet" + link to create one | test_api::test_existing_user_signs_in_without_consents_and_keeps_them, widgets_test |
 | A16 | Attach a certificate scan (image or PDF) | Type, grade/course, number, authority, issue/expiry filled into empty fields only, with a "check each one" note; unreadable file -> "enter by hand"; nothing uploaded | certificate_scan_test, integration_test/ocr_test.dart (real Windows OCR on a FAKE certificate) |
+| A17 | Profile: Engine + Cadet, then open Rank | Only Engine Cadet / Junior Engineer offered; picking a rank sets the level; exams limited to the department minus those the rank holds; API rejects contradictions (422) | test_api::test_contradictions_are_rejected, profile_rules_test |
 
 ## App (Phase 2)
 | # | Case | Auto |

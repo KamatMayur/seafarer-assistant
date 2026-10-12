@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../data/models.dart';
+import '../../domain/profile_rules.dart';
 import '../../widgets/common.dart';
 
 /// S3: who you are, so alerts can be filtered. Also used from Settings to edit the profile ([editing]).
@@ -45,10 +46,46 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     });
   }
 
+  // Each choice keeps the ones below it consistent: department -> level -> rank -> exams.
+  void _pickDepartment(Meta m, String v) {
+    _department = v;
+    final levels = levelsFor(m, v);
+    if (levels.length == 1) {
+      _level = levels.single;
+    } else if (!levels.contains(_level)) {
+      _level = null;
+    }
+    if (_rank != null && !ranksFor(m, v, _level).contains(_rank)) _rank = null;
+    _pruneGrades(m);
+  }
+
+  void _pickLevel(Meta m, String v) {
+    _level = v;
+    if (_rank != null && !ranksFor(m, _department, v).contains(_rank)) _rank = null;
+    _pruneGrades(m);
+  }
+
+  void _pickRank(Meta m, String? v) {
+    _rank = v;
+    _level = levelOfRank(m, v) ?? _level;
+    _pruneGrades(m);
+  }
+
+  void _pruneGrades(Meta m) => _grades.retainAll(examGradesFor(m, _department, _rank));
+
   Future<void> _save() async {
     if (_department == null || _level == null) {
       setState(() => _error = 'Please choose your department and level.');
       return;
+    }
+    final m = ref.read(metaProvider).value;
+    if (m != null) {
+      // A profile saved before these rules existed may still hold a rank or exams that do not fit.
+      if (_rank != null && !ranksFor(m, _department, _level).contains(_rank)) {
+        setState(() => _error = '$_rank does not fit the department and level you chose. Please pick your rank again.');
+        return;
+      }
+      _pruneGrades(m);
     }
     setState(() {
       _saving = true;
@@ -114,6 +151,20 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         ],
       );
 
+  Widget _examSection(Meta m) {
+    final grades = examGradesFor(m, _department, _rank);
+    if (grades.isEmpty) {
+      final who = _rank ?? (_department == null ? 'you' : m.label(m.departments, _department!));
+      return _section('Exams you are preparing for', 'There are no DGMA exams to follow for $who.', const SizedBox());
+    }
+    return _section(
+      'Exams you are preparing for',
+      'You get seat-booking, timetable and result notices.'
+          '${_rank != null && (m.rankHeldGrades[_rank] ?? []).isNotEmpty ? ' Exams a $_rank already holds are not shown.' : ''}',
+      _chips({for (final g in grades) g: m.label(m.examGrades, g)}, _grades),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final meta = ref.watch(metaProvider);
@@ -144,22 +195,27 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                       ),
                     _section('Name (optional)', null,
                         TextField(controller: _name, decoration: const InputDecoration(labelText: 'Name'))),
-                    _section('Department *', null, _choice(m.departments, _department, (v) {
-                      _department = v;
-                      _rank = null;
-                    })),
-                    _section('Level *', null, _choice(m.levels, _level, (v) => _level = v)),
+                    _section('Department *', null, _choice(m.departments, _department, (v) => _pickDepartment(m, v))),
+                    _section(
+                      'Level *',
+                      _department == null ? null : 'Only the levels that exist in ${m.label(m.departments, _department!)}.',
+                      _choice({for (final l in levelsFor(m, _department)) l: m.label(m.levels, l)}, _level,
+                          (v) => _pickLevel(m, v)),
+                    ),
                     if (_department != null)
                       _section(
                         'Rank',
-                        null,
+                        _level == null
+                            ? 'Choosing a rank also sets your level.'
+                            : 'Showing ${m.label(m.levels, _level!).toLowerCase()} ranks. Change the level above to see others.',
                         DropdownButtonFormField<String>(
-                          initialValue: (m.ranks[_department] ?? []).contains(_rank) ? _rank : null,
+                          // Key: the list changes with department and level, so rebuild the field.
+                          key: ValueKey('rank-$_department-$_level'),
+                          initialValue: ranksFor(m, _department, _level).contains(_rank) ? _rank : null,
                           items: [
-                            for (final r in m.ranks[_department] ?? <String>[])
-                              DropdownMenuItem(value: r, child: Text(r)),
+                            for (final r in ranksFor(m, _department, _level)) DropdownMenuItem(value: r, child: Text(r)),
                           ],
-                          onChanged: (v) => setState(() => _rank = v),
+                          onChanged: (v) => setState(() => _pickRank(m, v)),
                           decoration: const InputDecoration(labelText: 'Rank'),
                         ),
                       ),
@@ -175,8 +231,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     ),
                     _section('Ship types you sail on', 'Leave empty to get notices for all ship types.',
                         _chips(m.shipTypes, _ships)),
-                    _section('Exams you are preparing for', 'You get seat-booking, timetable and result notices.',
-                        _chips(m.examGrades, _grades)),
+                    _examSection(m),
                     _section(
                       'Language',
                       'Summaries in Indian languages are coming. Until then they are shown in English.',
