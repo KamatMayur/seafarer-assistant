@@ -15,6 +15,7 @@ import 'package:seafarer_assistant/domain/expiry.dart';
 import 'package:seafarer_assistant/domain/feed_grouping.dart';
 import 'package:seafarer_assistant/features/feed/feed_screen.dart';
 import 'package:seafarer_assistant/features/onboarding/welcome_screen.dart';
+import 'package:seafarer_assistant/features/search/passage_tile.dart';
 import 'package:seafarer_assistant/features/wallet/wallet_screen.dart';
 
 Widget _wrap(Widget child, {List<Override> overrides = const []}) {
@@ -136,6 +137,32 @@ void main() {
     expect(find.textContaining('Action by 20 Aug 2026'), findsOneWidget);
     expect(find.textContaining('Why: Safety/security advisory'), findsOneWidget);
     await tester.tap(find.byType(InkWell));
+    expect(opened, isTrue);
+  });
+
+  testWidgets('passage card quotes the page with matched words in bold', (tester) async {
+    final p = Passage.fromJson({
+      'document': {'id': 'D2', 'title': 'FAKE circular on revalidation', 'circular_number': '12 of 2026', 'doc_type': 'circular'},
+      'page': 2,
+      'quote': 'complete the revalidation of their Certificate',
+      'marks': [
+        [13, 25],
+        [35, 46],
+        [40, 999], // out of range: clamped, never throws
+      ],
+      'pdf_url': 'https://dgma.gov.in/FAKE.pdf#page=2',
+    });
+    var opened = false;
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(body: PassageTile(passage: p, onOpenDocument: () => opened = true)),
+    ));
+    expect(find.textContaining('12 of 2026'), findsOneWidget);
+    expect(find.textContaining('· page 2'), findsOneWidget);
+    expect(find.text('Official PDF, page 2'), findsOneWidget);
+    final spans = quoteSpans(p.quote, p.marks, const TextStyle(fontWeight: FontWeight.w700));
+    expect([for (final s in spans) if (s.style != null) s.text], ['revalidation', 'Certificate']);
+    expect(spans.map((s) => s.text).join(), p.quote);
+    await tester.tap(find.text('Summary'));
     expect(opened, isTrue);
   });
 }

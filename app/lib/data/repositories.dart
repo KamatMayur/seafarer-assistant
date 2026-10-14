@@ -257,6 +257,15 @@ class DocumentRepository {
     }
   }
 
+  /// Cited search: quoted passages with page numbers. Online only (the device has no PDF text).
+  Future<({List<Passage> items, String disclaimer})> passages(String q) async {
+    final j = await api.get('/v1/search/passages', query: {'q': q}) as Map<String, dynamic>;
+    return (
+      items: (j['items'] as List).map((e) => Passage.fromJson(e as Map<String, dynamic>)).toList(),
+      disclaimer: j['disclaimer'] as String? ?? '',
+    );
+  }
+
   /// Server search; offline it searches titles/summaries of documents already on this device.
   Future<({List<DocumentCard> items, int total, bool offline})> search({
     String? q,
@@ -449,6 +458,144 @@ class CertificateRepository {
       pulled++;
     }
     await db.setValue('cert_cursor', changes['cursor'] as String);
+    return SyncReport(pushed, pulled, conflicts);
+  }
+}
+
+// ------------------------------------------------------------------------------------------- sea service
+/// Sea service entries (S15): edited locally, synced with the same version rules as certificates.
+/// Has its own pull cursor, so certificate and sea-service syncs never skip each other's rows.
+class SeaServiceRepository {
+  SeaServiceRepository(this.api, this.db);
+  final ApiClient api;
+  final AppDatabase db;
+
+  Stream<List<SeaService>> watchAll() => (db.select(db.seaServices)
+        ..where((t) => t.deletedAt.isNull())
+        ..orderBy([(t) => OrderingTerm.desc(t.signOn)]))
+      .watch();
+
+  Future<SeaService?> byId(String id) =>
+      (db.select(db.seaServices)..where((t) => t.id.equals(id))).getSingleOrNull();
+
+  Future<String> save({
+    String? id,
+    required String vesselName,
+    String? imo,
+    String? rank,
+    required String signOn,
+    String? signOff,
+    String? shipType,
+    String? flag,
+  }) async {
+    final sid = id ?? _uuid.v4();
+    final existing = id == null ? null : await byId(id);
+    await db.into(db.seaServices).insertOnConflictUpdate(SeaServicesCompanion.insert(
+          id: sid,
+          vesselName: vesselName,
+          imo: Value(imo),
+          rank: Value(rank),
+          signOn: signOn,
+          signOff: Value(signOff),
+          shipType: Value(shipType),
+          flag: Value(flag),
+          version: Value(existing?.version ?? 0),
+          updatedAt: DateTime.now(),
+          dirty: const Value(true),
+          conflictJson: Value(existing?.conflictJson),
+        ));
+    return sid;
+  }
+
+  Future<void> softDelete(String id) =>
+      (db.update(db.seaServices)..where((t) => t.id.equals(id))).write(SeaServicesCompanion(
+        deletedAt: Value(DateTime.now()),
+        updatedAt: Value(DateTime.now()),
+        dirty: const Value(true),
+      ));
+
+  Map<String, dynamic> _toJson(SeaService s) => {
+        'id': s.id,
+        'vessel_name': s.vesselName,
+        'imo': s.imo,
+        'rank': s.rank,
+        'sign_on': s.signOn,
+        'sign_off': s.signOff,
+        'ship_type': s.shipType,
+        'flag': s.flag,
+        'version': s.version,
+        'deleted_at': s.deletedAt?.toUtc().toIso8601String(),
+      };
+
+  /// Keep the server copy (discarding the local edit) or keep mine (re-push on top of the server version).
+  Future<void> resolveConflict(String id, {required bool keepMine}) async {
+    final s = await byId(id);
+    if (s?.conflictJson == null) return;
+    final server = jsonDecode(s!.conflictJson!) as Map<String, dynamic>;
+    final serverVersion = server['version'] as int? ?? s.version;
+    if (keepMine) {
+      await (db.update(db.seaServices)..where((t) => t.id.equals(id))).write(SeaServicesCompanion(
+        version: Value(serverVersion),
+        conflictJson: const Value(null),
+        dirty: const Value(true),
+      ));
+    } else {
+      await _applyServer(server, version: serverVersion);
+    }
+  }
+
+  Future<void> _applyServer(Map<String, dynamic> s, {int? version}) =>
+      db.into(db.seaServices).insertOnConflictUpdate(SeaServicesCompanion.insert(
+            id: s['id'] as String,
+            vesselName: s['vessel_name'] as String,
+            imo: Value(s['imo'] as String?),
+            rank: Value(s['rank'] as String?),
+            signOn: s['sign_on'] as String,
+            signOff: Value(s['sign_off'] as String?),
+            shipType: Value(s['ship_type'] as String?),
+            flag: Value(s['flag'] as String?),
+            version: Value(version ?? s['version'] as int? ?? 0),
+            updatedAt: DateTime.tryParse('${s['updated_at']}') ?? DateTime.now(),
+            deletedAt: Value(s['deleted_at'] == null ? null : DateTime.tryParse('${s['deleted_at']}')),
+            dirty: const Value(false),
+            conflictJson: const Value(null),
+          ));
+
+  /// Push local changes, then pull server changes.
+  Future<SyncReport> sync() async {
+    final dirty = await (db.select(db.seaServices)..where((t) => t.dirty.equals(true) & t.conflictJson.isNull())).get();
+    var pushed = 0, conflicts = 0, pulled = 0;
+    if (dirty.isNotEmpty) {
+      final r = await api.post('/v1/sync/push', body: {'sea_service': dirty.map(_toJson).toList()})
+          as Map<String, dynamic>;
+      for (final e in (r['applied'] as Map<String, dynamic>).cast<String, int>().entries) {
+        await (db.update(db.seaServices)..where((t) => t.id.equals(e.key)))
+            .write(SeaServicesCompanion(version: Value(e.value), dirty: const Value(false)));
+        pushed++;
+      }
+      for (final c in (r['conflicts'] as List).cast<Map<String, dynamic>>()) {
+        if (c['entity'] != 'sea_service') continue;
+        await (db.update(db.seaServices)..where((t) => t.id.equals(c['id'] as String)))
+            .write(SeaServicesCompanion(conflictJson: Value(jsonEncode(c['server']))));
+        conflicts++;
+      }
+    }
+    final since = await db.getValue('sea_cursor');
+    final changes = await api.get('/v1/sync/changes', query: {'since': since}) as Map<String, dynamic>;
+    for (final s in (changes['sea_service'] as List? ?? const []).cast<Map<String, dynamic>>()) {
+      final local = await byId(s['id'] as String);
+      if (local != null && local.dirty) {
+        if (local.conflictJson == null && (s['version'] as int? ?? 0) > local.version) {
+          await (db.update(db.seaServices)..where((t) => t.id.equals(local.id)))
+              .write(SeaServicesCompanion(conflictJson: Value(jsonEncode(s))));
+          conflicts++;
+        }
+        continue; // local edit wins until pushed or resolved
+      }
+      await _applyServer(s);
+      pulled++;
+    }
+    await db.setValue('sea_cursor', changes['cursor'] as String);
     return SyncReport(pushed, pulled, conflicts);
   }
 }

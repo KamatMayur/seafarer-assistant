@@ -11,7 +11,7 @@ extractive summary (quotes only), and creates alerts for users whose profile mat
 exam grades, ship types, followed topics, certificates held). The app shows those alerts, the documents, an
 archive search and a certificate wallet with expiry reminders, and works offline. **Phase 1 (backend) is
 complete. Phase 2 (Windows app) is complete and ready for testers except hosting** (see "Next steps").
-Phases 3–6 not started.
+Phase 3 has started: certificate scan reading (R12), cited search (R14), sea time + NRI days (R15). Phases 4–6 not started.
 
 ## Status by phase
 | Phase | State |
@@ -19,7 +19,8 @@ Phases 3–6 not started.
 | 0 Plan | Done: `docs/architecture.md`, `schema.sql`, `openapi.yaml`, `screens.md`, `decisions.md` |
 | 1 Backend pipeline + admin | **Done.** 13 sources healthy; 129 tests pass; ruff clean. Admin UI at `/admin` with per-admin accounts (password + TOTP). Not done: Docker compose smoke test (no Docker on the dev machine). |
 | 2 Windows app | **Done, waiting for a server.** All app tests pass, incl. a full UI journey on the real app (`integration_test/`). Tray + start with Windows, single instance, report a problem, crash reports, privacy notice, tester tips, MSIX installer script. Certificate scan reading (on-device Windows OCR, R12). |
-| 3–6 | Not started (translations via IndicTrans2, OCR scan, RPSL/vessel checks, sea time/NRI, PDF export, cited search, premium, mobile, launch). |
+| 3 | **Started.** Done: OCR scan (R12, listed under Phase 2 above); cited search – `GET /v1/search/passages` + "Quotes" mode in Archive (verbatim passages with page numbers and a link to the official PDF at that page; R14); sea time + NRI days – "Sea time" tab, synced log, totals by rank/ship type, NRI days per financial year from `app/assets/nri_rules.json` (R15; **owner must check the tax citations**). To do (order by tester feedback): exam countdown cards, RPSL/vessel checks, regional languages (IndicTrans2), PDF export (sea service summary + certificates pack). |
+| 4–6 | Not started (premium, mobile, launch). |
 
 ## Binding decisions (details in docs/decisions.md)
 - **R1 No LLM / no API key.** Rules-based tags; extractive summaries. Translation later with IndicTrans2 (local).
@@ -32,6 +33,9 @@ Phases 3–6 not started.
 - **R7** CoC dispatch lists are opt-in (follow topic `coc_dispatch`), never a certificate-impact alert.
 - **R8** The issuing branch never restricts the audience. **R9** Competency/GMDSS/signal exam notices are officer-only.
 - **R10** The app groups a document's alerts into one feed card. **R11** Per-admin accounts with TOTP.
+- **R12** Certificate OCR on the device. **R13** Profile fields must agree.
+- **R14** Cited search replaces "Ask about the rules": verbatim passages with page numbers, no generated answer.
+- **R15** Sea time + NRI days computed on the device; tax thresholds and citations in `app/assets/nri_rules.json`, unverified until the owner checks them.
 - Owner applied defaults for R7–R11 to finish Phase 1; they can still change them.
 
 ## What exists (where to look)
@@ -108,3 +112,12 @@ cd app; flutter pub get; dart run build_runner build; flutter test --no-pub; flu
 - 12-Oct-2026: "I already have an account" sign-in (re-sign-in no longer overwrites consents); certificate scan
   reading with Windows' built-in OCR (R12), checked on a FAKE certificate image and PDF.
 - 12-Oct-2026: profile fields depend on each other (department -> level -> rank -> exams, R13), checked by the API.
+- 13-Oct-2026 (session on a second dev machine: Flutter in `C:	oolslutter`, VS Build Tools on C:): Phase 3
+  cited search (backend + Quotes mode + tests, R14); `build_tester.ps1` now passes `--install-certificate false`
+  (without it, in a non-interactive shell msix:create stops at a prompt and leaves the package unsigned). No real
+  data was scraped on that machine (no scraper contact email given), so Quotes is tested on FAKE data only:
+  checklist Q2/Q5/Q6 and the integration journey still need a run against real circulars.
+- 14-Oct-2026: Phase 3 sea time + NRI days (R15): Drift table `sea_services` (app schema v2, migration adds the
+  table), `SeaServiceRepository` sync, Sea time tab + form, `domain/sea_time.dart`, rules file with citations;
+  backend tests for sea-service sync. Owner to do: check the citations in `app/assets/nri_rules.json` (especially
+  the Income-tax Act, 2025) and set `verified_by_owner` to true per regime.

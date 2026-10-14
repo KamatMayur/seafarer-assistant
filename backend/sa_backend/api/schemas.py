@@ -187,6 +187,23 @@ class SearchPage(BaseModel):
     page: int
 
 
+class Passage(BaseModel):
+    """A quoted passage from one page of a circular. `quote` is verbatim PDF text (fragments joined by ' … ');
+    `marks` are [start, end) character offsets of the matched words inside `quote`."""
+
+    document: DocumentCard
+    page: int
+    quote: str
+    marks: list[tuple[int, int]]
+    pdf_url: str  # official PDF, opened at the page
+
+
+class PassagePage(BaseModel):
+    query: str
+    items: list[Passage]
+    disclaimer: str = reference.SEARCH_DISCLAIMER
+
+
 class CertificateSync(BaseModel):
     id: uuid.UUID
     type: Literal["coc", "cop", "stcw_basic", "stcw_advanced", "medical", "cdc", "passport", "bsid", "visa", "other"]

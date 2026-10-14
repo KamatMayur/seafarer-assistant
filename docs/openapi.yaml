@@ -153,6 +153,34 @@ paths:
         - {$ref: '#/components/parameters/Lang'}
       responses:
         '200': {description: OK, content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: '#/components/schemas/DocumentCard'}}, total: {type: integer}}}}}}
+  /search/passages:
+    get:
+      tags: [documents]
+      summary: Cited search (Phase 3, replaces /ask under R1) – verbatim passages with page numbers, no generated answer
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string, minLength: 2, maxLength: 200}}
+        - {name: limit, in: query, schema: {type: integer, default: 10, maximum: 30}}
+        - {$ref: '#/components/parameters/Lang'}
+      responses:
+        '200':
+          description: At most 2 passages per document, best first. Internal and metadata-only documents are never searched.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  query: {type: string}
+                  disclaimer: {type: string}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        document: {$ref: '#/components/schemas/DocumentCard'}
+                        page: {type: integer, description: 1-based PDF page}
+                        quote: {type: string, description: verbatim text; fragments joined by ' … '}
+                        marks: {type: array, items: {type: array, items: {type: integer}, minItems: 2, maxItems: 2}, description: '[start, end) offsets of matched words in quote'}
+                        pdf_url: {type: string, description: 'official PDF with #page=N'}
   /documents/{id}:
     get:
       tags: [documents]
@@ -214,7 +242,7 @@ paths:
   /sea-service/summary:
     get:
       tags: [sea-service]
-      summary: Total sea time and NRI-day counts per Indian financial year (informational)
+      summary: NOT BUILT (decisions.md R15) – totals and NRI days are computed in the app from the synced rows
       responses:
         '200':
           description: OK

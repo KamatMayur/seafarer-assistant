@@ -42,6 +42,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/tray_icon.ico
+    - assets/nri_rules.json
 
 # Windows installer: `dart run msix:create` -> build/windows/x64/runner/Release/seafarer_assistant.msix
 # Without a code-signing certificate the package is signed with a self-signed test certificate (see app/README.md).

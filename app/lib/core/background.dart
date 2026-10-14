@@ -79,6 +79,11 @@ class BackgroundSync {
     } on ApiException catch (_) {
       // offline or server problem: local changes stay queued (dirty) and are pushed next time
     }
+    try {
+      await ref.read(seaRepoProvider).sync();
+    } on ApiException catch (_) {
+      // same for sea service
+    }
   }
 
   /// Toasts each reminder bucket (180/90/30/7/0 days, expired) once per certificate and expiry date.

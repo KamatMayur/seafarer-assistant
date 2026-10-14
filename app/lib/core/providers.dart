@@ -1,8 +1,12 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../data/db.dart';
 import '../data/models.dart';
 import '../data/repositories.dart';
+import '../domain/sea_time.dart';
 import 'api_client.dart';
 import 'config.dart';
 import 'feedback.dart';
@@ -30,6 +34,8 @@ final documentRepoProvider =
     Provider((ref) => DocumentRepository(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
 final feedbackProvider =
     Provider((ref) => FeedbackService(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
+final seaRepoProvider =
+    Provider((ref) => SeaServiceRepository(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
 final certRepoProvider =
     Provider((ref) => CertificateRepository(ref.watch(apiClientProvider), ref.watch(databaseProvider)));
 
@@ -92,6 +98,12 @@ final dataSaverProvider = StreamProvider<bool>(
 final feedItemsProvider = StreamProvider<List<FeedItem>>((ref) => ref.watch(feedRepoProvider).watch());
 
 final certificatesProvider = StreamProvider<List<Certificate>>((ref) => ref.watch(certRepoProvider).watchAll());
+
+final seaServiceProvider = StreamProvider<List<SeaService>>((ref) => ref.watch(seaRepoProvider).watchAll());
+
+/// NRI-day thresholds with their citations (assets/nri_rules.json, decisions.md R15).
+final nriRulesProvider = FutureProvider<NriRules>(
+    (ref) async => NriRules.fromJson(jsonDecode(await rootBundle.loadString('assets/nri_rules.json')) as Map<String, dynamic>));
 
 /// Last time the feed was synced with the server (shown as "Updated 5 min ago" / offline banner).
 final lastSyncProvider = StreamProvider<DateTime?>((ref) => ref

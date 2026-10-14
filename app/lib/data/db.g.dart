@@ -2560,6 +2560,755 @@ class ReminderLogCompanion extends UpdateCompanion<ReminderLogData> {
   }
 }
 
+class $SeaServicesTable extends SeaServices
+    with TableInfo<$SeaServicesTable, SeaService> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SeaServicesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _vesselNameMeta = const VerificationMeta(
+    'vesselName',
+  );
+  @override
+  late final GeneratedColumn<String> vesselName = GeneratedColumn<String>(
+    'vessel_name',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _imoMeta = const VerificationMeta('imo');
+  @override
+  late final GeneratedColumn<String> imo = GeneratedColumn<String>(
+    'imo',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _rankMeta = const VerificationMeta('rank');
+  @override
+  late final GeneratedColumn<String> rank = GeneratedColumn<String>(
+    'rank',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _signOnMeta = const VerificationMeta('signOn');
+  @override
+  late final GeneratedColumn<String> signOn = GeneratedColumn<String>(
+    'sign_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _signOffMeta = const VerificationMeta(
+    'signOff',
+  );
+  @override
+  late final GeneratedColumn<String> signOff = GeneratedColumn<String>(
+    'sign_off',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _shipTypeMeta = const VerificationMeta(
+    'shipType',
+  );
+  @override
+  late final GeneratedColumn<String> shipType = GeneratedColumn<String>(
+    'ship_type',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _flagMeta = const VerificationMeta('flag');
+  @override
+  late final GeneratedColumn<String> flag = GeneratedColumn<String>(
+    'flag',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _versionMeta = const VerificationMeta(
+    'version',
+  );
+  @override
+  late final GeneratedColumn<int> version = GeneratedColumn<int>(
+    'version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> deletedAt = GeneratedColumn<DateTime>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dirtyMeta = const VerificationMeta('dirty');
+  @override
+  late final GeneratedColumn<bool> dirty = GeneratedColumn<bool>(
+    'dirty',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("dirty" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _conflictJsonMeta = const VerificationMeta(
+    'conflictJson',
+  );
+  @override
+  late final GeneratedColumn<String> conflictJson = GeneratedColumn<String>(
+    'conflict_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    vesselName,
+    imo,
+    rank,
+    signOn,
+    signOff,
+    shipType,
+    flag,
+    version,
+    updatedAt,
+    deletedAt,
+    dirty,
+    conflictJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sea_services';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SeaService> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('vessel_name')) {
+      context.handle(
+        _vesselNameMeta,
+        vesselName.isAcceptableOrUnknown(data['vessel_name']!, _vesselNameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_vesselNameMeta);
+    }
+    if (data.containsKey('imo')) {
+      context.handle(
+        _imoMeta,
+        imo.isAcceptableOrUnknown(data['imo']!, _imoMeta),
+      );
+    }
+    if (data.containsKey('rank')) {
+      context.handle(
+        _rankMeta,
+        rank.isAcceptableOrUnknown(data['rank']!, _rankMeta),
+      );
+    }
+    if (data.containsKey('sign_on')) {
+      context.handle(
+        _signOnMeta,
+        signOn.isAcceptableOrUnknown(data['sign_on']!, _signOnMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_signOnMeta);
+    }
+    if (data.containsKey('sign_off')) {
+      context.handle(
+        _signOffMeta,
+        signOff.isAcceptableOrUnknown(data['sign_off']!, _signOffMeta),
+      );
+    }
+    if (data.containsKey('ship_type')) {
+      context.handle(
+        _shipTypeMeta,
+        shipType.isAcceptableOrUnknown(data['ship_type']!, _shipTypeMeta),
+      );
+    }
+    if (data.containsKey('flag')) {
+      context.handle(
+        _flagMeta,
+        flag.isAcceptableOrUnknown(data['flag']!, _flagMeta),
+      );
+    }
+    if (data.containsKey('version')) {
+      context.handle(
+        _versionMeta,
+        version.isAcceptableOrUnknown(data['version']!, _versionMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    if (data.containsKey('dirty')) {
+      context.handle(
+        _dirtyMeta,
+        dirty.isAcceptableOrUnknown(data['dirty']!, _dirtyMeta),
+      );
+    }
+    if (data.containsKey('conflict_json')) {
+      context.handle(
+        _conflictJsonMeta,
+        conflictJson.isAcceptableOrUnknown(
+          data['conflict_json']!,
+          _conflictJsonMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SeaService map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SeaService(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      vesselName: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}vessel_name'],
+      )!,
+      imo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}imo'],
+      ),
+      rank: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}rank'],
+      ),
+      signOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sign_on'],
+      )!,
+      signOff: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sign_off'],
+      ),
+      shipType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ship_type'],
+      ),
+      flag: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}flag'],
+      ),
+      version: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}version'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}deleted_at'],
+      ),
+      dirty: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}dirty'],
+      )!,
+      conflictJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}conflict_json'],
+      ),
+    );
+  }
+
+  @override
+  $SeaServicesTable createAlias(String alias) {
+    return $SeaServicesTable(attachedDatabase, alias);
+  }
+}
+
+class SeaService extends DataClass implements Insertable<SeaService> {
+  final String id;
+  final String vesselName;
+  final String? imo;
+  final String? rank;
+  final String signOn;
+  final String? signOff;
+  final String? shipType;
+  final String? flag;
+  final int version;
+  final DateTime updatedAt;
+  final DateTime? deletedAt;
+  final bool dirty;
+  final String? conflictJson;
+  const SeaService({
+    required this.id,
+    required this.vesselName,
+    this.imo,
+    this.rank,
+    required this.signOn,
+    this.signOff,
+    this.shipType,
+    this.flag,
+    required this.version,
+    required this.updatedAt,
+    this.deletedAt,
+    required this.dirty,
+    this.conflictJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['vessel_name'] = Variable<String>(vesselName);
+    if (!nullToAbsent || imo != null) {
+      map['imo'] = Variable<String>(imo);
+    }
+    if (!nullToAbsent || rank != null) {
+      map['rank'] = Variable<String>(rank);
+    }
+    map['sign_on'] = Variable<String>(signOn);
+    if (!nullToAbsent || signOff != null) {
+      map['sign_off'] = Variable<String>(signOff);
+    }
+    if (!nullToAbsent || shipType != null) {
+      map['ship_type'] = Variable<String>(shipType);
+    }
+    if (!nullToAbsent || flag != null) {
+      map['flag'] = Variable<String>(flag);
+    }
+    map['version'] = Variable<int>(version);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt);
+    }
+    map['dirty'] = Variable<bool>(dirty);
+    if (!nullToAbsent || conflictJson != null) {
+      map['conflict_json'] = Variable<String>(conflictJson);
+    }
+    return map;
+  }
+
+  SeaServicesCompanion toCompanion(bool nullToAbsent) {
+    return SeaServicesCompanion(
+      id: Value(id),
+      vesselName: Value(vesselName),
+      imo: imo == null && nullToAbsent ? const Value.absent() : Value(imo),
+      rank: rank == null && nullToAbsent ? const Value.absent() : Value(rank),
+      signOn: Value(signOn),
+      signOff: signOff == null && nullToAbsent
+          ? const Value.absent()
+          : Value(signOff),
+      shipType: shipType == null && nullToAbsent
+          ? const Value.absent()
+          : Value(shipType),
+      flag: flag == null && nullToAbsent ? const Value.absent() : Value(flag),
+      version: Value(version),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+      dirty: Value(dirty),
+      conflictJson: conflictJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(conflictJson),
+    );
+  }
+
+  factory SeaService.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SeaService(
+      id: serializer.fromJson<String>(json['id']),
+      vesselName: serializer.fromJson<String>(json['vesselName']),
+      imo: serializer.fromJson<String?>(json['imo']),
+      rank: serializer.fromJson<String?>(json['rank']),
+      signOn: serializer.fromJson<String>(json['signOn']),
+      signOff: serializer.fromJson<String?>(json['signOff']),
+      shipType: serializer.fromJson<String?>(json['shipType']),
+      flag: serializer.fromJson<String?>(json['flag']),
+      version: serializer.fromJson<int>(json['version']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      deletedAt: serializer.fromJson<DateTime?>(json['deletedAt']),
+      dirty: serializer.fromJson<bool>(json['dirty']),
+      conflictJson: serializer.fromJson<String?>(json['conflictJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'vesselName': serializer.toJson<String>(vesselName),
+      'imo': serializer.toJson<String?>(imo),
+      'rank': serializer.toJson<String?>(rank),
+      'signOn': serializer.toJson<String>(signOn),
+      'signOff': serializer.toJson<String?>(signOff),
+      'shipType': serializer.toJson<String?>(shipType),
+      'flag': serializer.toJson<String?>(flag),
+      'version': serializer.toJson<int>(version),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'deletedAt': serializer.toJson<DateTime?>(deletedAt),
+      'dirty': serializer.toJson<bool>(dirty),
+      'conflictJson': serializer.toJson<String?>(conflictJson),
+    };
+  }
+
+  SeaService copyWith({
+    String? id,
+    String? vesselName,
+    Value<String?> imo = const Value.absent(),
+    Value<String?> rank = const Value.absent(),
+    String? signOn,
+    Value<String?> signOff = const Value.absent(),
+    Value<String?> shipType = const Value.absent(),
+    Value<String?> flag = const Value.absent(),
+    int? version,
+    DateTime? updatedAt,
+    Value<DateTime?> deletedAt = const Value.absent(),
+    bool? dirty,
+    Value<String?> conflictJson = const Value.absent(),
+  }) => SeaService(
+    id: id ?? this.id,
+    vesselName: vesselName ?? this.vesselName,
+    imo: imo.present ? imo.value : this.imo,
+    rank: rank.present ? rank.value : this.rank,
+    signOn: signOn ?? this.signOn,
+    signOff: signOff.present ? signOff.value : this.signOff,
+    shipType: shipType.present ? shipType.value : this.shipType,
+    flag: flag.present ? flag.value : this.flag,
+    version: version ?? this.version,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+    dirty: dirty ?? this.dirty,
+    conflictJson: conflictJson.present ? conflictJson.value : this.conflictJson,
+  );
+  SeaService copyWithCompanion(SeaServicesCompanion data) {
+    return SeaService(
+      id: data.id.present ? data.id.value : this.id,
+      vesselName: data.vesselName.present
+          ? data.vesselName.value
+          : this.vesselName,
+      imo: data.imo.present ? data.imo.value : this.imo,
+      rank: data.rank.present ? data.rank.value : this.rank,
+      signOn: data.signOn.present ? data.signOn.value : this.signOn,
+      signOff: data.signOff.present ? data.signOff.value : this.signOff,
+      shipType: data.shipType.present ? data.shipType.value : this.shipType,
+      flag: data.flag.present ? data.flag.value : this.flag,
+      version: data.version.present ? data.version.value : this.version,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+      dirty: data.dirty.present ? data.dirty.value : this.dirty,
+      conflictJson: data.conflictJson.present
+          ? data.conflictJson.value
+          : this.conflictJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeaService(')
+          ..write('id: $id, ')
+          ..write('vesselName: $vesselName, ')
+          ..write('imo: $imo, ')
+          ..write('rank: $rank, ')
+          ..write('signOn: $signOn, ')
+          ..write('signOff: $signOff, ')
+          ..write('shipType: $shipType, ')
+          ..write('flag: $flag, ')
+          ..write('version: $version, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty, ')
+          ..write('conflictJson: $conflictJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    vesselName,
+    imo,
+    rank,
+    signOn,
+    signOff,
+    shipType,
+    flag,
+    version,
+    updatedAt,
+    deletedAt,
+    dirty,
+    conflictJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SeaService &&
+          other.id == this.id &&
+          other.vesselName == this.vesselName &&
+          other.imo == this.imo &&
+          other.rank == this.rank &&
+          other.signOn == this.signOn &&
+          other.signOff == this.signOff &&
+          other.shipType == this.shipType &&
+          other.flag == this.flag &&
+          other.version == this.version &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt &&
+          other.dirty == this.dirty &&
+          other.conflictJson == this.conflictJson);
+}
+
+class SeaServicesCompanion extends UpdateCompanion<SeaService> {
+  final Value<String> id;
+  final Value<String> vesselName;
+  final Value<String?> imo;
+  final Value<String?> rank;
+  final Value<String> signOn;
+  final Value<String?> signOff;
+  final Value<String?> shipType;
+  final Value<String?> flag;
+  final Value<int> version;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> deletedAt;
+  final Value<bool> dirty;
+  final Value<String?> conflictJson;
+  final Value<int> rowid;
+  const SeaServicesCompanion({
+    this.id = const Value.absent(),
+    this.vesselName = const Value.absent(),
+    this.imo = const Value.absent(),
+    this.rank = const Value.absent(),
+    this.signOn = const Value.absent(),
+    this.signOff = const Value.absent(),
+    this.shipType = const Value.absent(),
+    this.flag = const Value.absent(),
+    this.version = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
+    this.conflictJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SeaServicesCompanion.insert({
+    required String id,
+    required String vesselName,
+    this.imo = const Value.absent(),
+    this.rank = const Value.absent(),
+    required String signOn,
+    this.signOff = const Value.absent(),
+    this.shipType = const Value.absent(),
+    this.flag = const Value.absent(),
+    this.version = const Value.absent(),
+    required DateTime updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.dirty = const Value.absent(),
+    this.conflictJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       vesselName = Value(vesselName),
+       signOn = Value(signOn),
+       updatedAt = Value(updatedAt);
+  static Insertable<SeaService> custom({
+    Expression<String>? id,
+    Expression<String>? vesselName,
+    Expression<String>? imo,
+    Expression<String>? rank,
+    Expression<String>? signOn,
+    Expression<String>? signOff,
+    Expression<String>? shipType,
+    Expression<String>? flag,
+    Expression<int>? version,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? deletedAt,
+    Expression<bool>? dirty,
+    Expression<String>? conflictJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (vesselName != null) 'vessel_name': vesselName,
+      if (imo != null) 'imo': imo,
+      if (rank != null) 'rank': rank,
+      if (signOn != null) 'sign_on': signOn,
+      if (signOff != null) 'sign_off': signOff,
+      if (shipType != null) 'ship_type': shipType,
+      if (flag != null) 'flag': flag,
+      if (version != null) 'version': version,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (dirty != null) 'dirty': dirty,
+      if (conflictJson != null) 'conflict_json': conflictJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SeaServicesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? vesselName,
+    Value<String?>? imo,
+    Value<String?>? rank,
+    Value<String>? signOn,
+    Value<String?>? signOff,
+    Value<String?>? shipType,
+    Value<String?>? flag,
+    Value<int>? version,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? deletedAt,
+    Value<bool>? dirty,
+    Value<String?>? conflictJson,
+    Value<int>? rowid,
+  }) {
+    return SeaServicesCompanion(
+      id: id ?? this.id,
+      vesselName: vesselName ?? this.vesselName,
+      imo: imo ?? this.imo,
+      rank: rank ?? this.rank,
+      signOn: signOn ?? this.signOn,
+      signOff: signOff ?? this.signOff,
+      shipType: shipType ?? this.shipType,
+      flag: flag ?? this.flag,
+      version: version ?? this.version,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      dirty: dirty ?? this.dirty,
+      conflictJson: conflictJson ?? this.conflictJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (vesselName.present) {
+      map['vessel_name'] = Variable<String>(vesselName.value);
+    }
+    if (imo.present) {
+      map['imo'] = Variable<String>(imo.value);
+    }
+    if (rank.present) {
+      map['rank'] = Variable<String>(rank.value);
+    }
+    if (signOn.present) {
+      map['sign_on'] = Variable<String>(signOn.value);
+    }
+    if (signOff.present) {
+      map['sign_off'] = Variable<String>(signOff.value);
+    }
+    if (shipType.present) {
+      map['ship_type'] = Variable<String>(shipType.value);
+    }
+    if (flag.present) {
+      map['flag'] = Variable<String>(flag.value);
+    }
+    if (version.present) {
+      map['version'] = Variable<int>(version.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<DateTime>(deletedAt.value);
+    }
+    if (dirty.present) {
+      map['dirty'] = Variable<bool>(dirty.value);
+    }
+    if (conflictJson.present) {
+      map['conflict_json'] = Variable<String>(conflictJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SeaServicesCompanion(')
+          ..write('id: $id, ')
+          ..write('vesselName: $vesselName, ')
+          ..write('imo: $imo, ')
+          ..write('rank: $rank, ')
+          ..write('signOn: $signOn, ')
+          ..write('signOff: $signOff, ')
+          ..write('shipType: $shipType, ')
+          ..write('flag: $flag, ')
+          ..write('version: $version, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('dirty: $dirty, ')
+          ..write('conflictJson: $conflictJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -2570,6 +3319,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $CertificatesTable certificates = $CertificatesTable(this);
   late final $ReminderLogTable reminderLog = $ReminderLogTable(this);
+  late final $SeaServicesTable seaServices = $SeaServicesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2580,6 +3330,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     cachedDocuments,
     certificates,
     reminderLog,
+    seaServices,
   ];
 }
 
@@ -3908,6 +4659,371 @@ typedef $$ReminderLogTableProcessedTableManager =
       ReminderLogData,
       PrefetchHooks Function()
     >;
+typedef $$SeaServicesTableCreateCompanionBuilder =
+    SeaServicesCompanion Function({
+      required String id,
+      required String vesselName,
+      Value<String?> imo,
+      Value<String?> rank,
+      required String signOn,
+      Value<String?> signOff,
+      Value<String?> shipType,
+      Value<String?> flag,
+      Value<int> version,
+      required DateTime updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> dirty,
+      Value<String?> conflictJson,
+      Value<int> rowid,
+    });
+typedef $$SeaServicesTableUpdateCompanionBuilder =
+    SeaServicesCompanion Function({
+      Value<String> id,
+      Value<String> vesselName,
+      Value<String?> imo,
+      Value<String?> rank,
+      Value<String> signOn,
+      Value<String?> signOff,
+      Value<String?> shipType,
+      Value<String?> flag,
+      Value<int> version,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> deletedAt,
+      Value<bool> dirty,
+      Value<String?> conflictJson,
+      Value<int> rowid,
+    });
+
+class $$SeaServicesTableFilterComposer
+    extends Composer<_$AppDatabase, $SeaServicesTable> {
+  $$SeaServicesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get vesselName => $composableBuilder(
+    column: $table.vesselName,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get imo => $composableBuilder(
+    column: $table.imo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get rank => $composableBuilder(
+    column: $table.rank,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signOn => $composableBuilder(
+    column: $table.signOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get signOff => $composableBuilder(
+    column: $table.signOff,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get shipType => $composableBuilder(
+    column: $table.shipType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get flag => $composableBuilder(
+    column: $table.flag,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get conflictJson => $composableBuilder(
+    column: $table.conflictJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SeaServicesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SeaServicesTable> {
+  $$SeaServicesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get vesselName => $composableBuilder(
+    column: $table.vesselName,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get imo => $composableBuilder(
+    column: $table.imo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get rank => $composableBuilder(
+    column: $table.rank,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signOn => $composableBuilder(
+    column: $table.signOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get signOff => $composableBuilder(
+    column: $table.signOff,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get shipType => $composableBuilder(
+    column: $table.shipType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get flag => $composableBuilder(
+    column: $table.flag,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get version => $composableBuilder(
+    column: $table.version,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get dirty => $composableBuilder(
+    column: $table.dirty,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get conflictJson => $composableBuilder(
+    column: $table.conflictJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SeaServicesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SeaServicesTable> {
+  $$SeaServicesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get vesselName => $composableBuilder(
+    column: $table.vesselName,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get imo =>
+      $composableBuilder(column: $table.imo, builder: (column) => column);
+
+  GeneratedColumn<String> get rank =>
+      $composableBuilder(column: $table.rank, builder: (column) => column);
+
+  GeneratedColumn<String> get signOn =>
+      $composableBuilder(column: $table.signOn, builder: (column) => column);
+
+  GeneratedColumn<String> get signOff =>
+      $composableBuilder(column: $table.signOff, builder: (column) => column);
+
+  GeneratedColumn<String> get shipType =>
+      $composableBuilder(column: $table.shipType, builder: (column) => column);
+
+  GeneratedColumn<String> get flag =>
+      $composableBuilder(column: $table.flag, builder: (column) => column);
+
+  GeneratedColumn<int> get version =>
+      $composableBuilder(column: $table.version, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+
+  GeneratedColumn<bool> get dirty =>
+      $composableBuilder(column: $table.dirty, builder: (column) => column);
+
+  GeneratedColumn<String> get conflictJson => $composableBuilder(
+    column: $table.conflictJson,
+    builder: (column) => column,
+  );
+}
+
+class $$SeaServicesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SeaServicesTable,
+          SeaService,
+          $$SeaServicesTableFilterComposer,
+          $$SeaServicesTableOrderingComposer,
+          $$SeaServicesTableAnnotationComposer,
+          $$SeaServicesTableCreateCompanionBuilder,
+          $$SeaServicesTableUpdateCompanionBuilder,
+          (
+            SeaService,
+            BaseReferences<_$AppDatabase, $SeaServicesTable, SeaService>,
+          ),
+          SeaService,
+          PrefetchHooks Function()
+        > {
+  $$SeaServicesTableTableManager(_$AppDatabase db, $SeaServicesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SeaServicesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SeaServicesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SeaServicesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> vesselName = const Value.absent(),
+                Value<String?> imo = const Value.absent(),
+                Value<String?> rank = const Value.absent(),
+                Value<String> signOn = const Value.absent(),
+                Value<String?> signOff = const Value.absent(),
+                Value<String?> shipType = const Value.absent(),
+                Value<String?> flag = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
+                Value<String?> conflictJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SeaServicesCompanion(
+                id: id,
+                vesselName: vesselName,
+                imo: imo,
+                rank: rank,
+                signOn: signOn,
+                signOff: signOff,
+                shipType: shipType,
+                flag: flag,
+                version: version,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
+                conflictJson: conflictJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String vesselName,
+                Value<String?> imo = const Value.absent(),
+                Value<String?> rank = const Value.absent(),
+                required String signOn,
+                Value<String?> signOff = const Value.absent(),
+                Value<String?> shipType = const Value.absent(),
+                Value<String?> flag = const Value.absent(),
+                Value<int> version = const Value.absent(),
+                required DateTime updatedAt,
+                Value<DateTime?> deletedAt = const Value.absent(),
+                Value<bool> dirty = const Value.absent(),
+                Value<String?> conflictJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SeaServicesCompanion.insert(
+                id: id,
+                vesselName: vesselName,
+                imo: imo,
+                rank: rank,
+                signOn: signOn,
+                signOff: signOff,
+                shipType: shipType,
+                flag: flag,
+                version: version,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                dirty: dirty,
+                conflictJson: conflictJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SeaServicesTable, SeaService>(table),
+                  BaseReferences<_$AppDatabase, $SeaServicesTable, SeaService>(
+                    db,
+                    table,
+                    e,
+                  ),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SeaServicesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SeaServicesTable,
+      SeaService,
+      $$SeaServicesTableFilterComposer,
+      $$SeaServicesTableOrderingComposer,
+      $$SeaServicesTableAnnotationComposer,
+      $$SeaServicesTableCreateCompanionBuilder,
+      $$SeaServicesTableUpdateCompanionBuilder,
+      (
+        SeaService,
+        BaseReferences<_$AppDatabase, $SeaServicesTable, SeaService>,
+      ),
+      SeaService,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -3922,4 +5038,6 @@ class $AppDatabaseManager {
       $$CertificatesTableTableManager(_db, _db.certificates);
   $$ReminderLogTableTableManager get reminderLog =>
       $$ReminderLogTableTableManager(_db, _db.reminderLog);
+  $$SeaServicesTableTableManager get seaServices =>
+      $$SeaServicesTableTableManager(_db, _db.seaServices);
 }

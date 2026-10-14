@@ -7,7 +7,7 @@ rules and the commands.
 An **independent** assistant for Indian merchant navy seafarers. It watches public dgma.gov.in pages for circulars,
 exam notices and advisories, extracts and tags them, alerts only the seafarers they concern, and keeps a
 certificate wallet with expiry reminders. Windows app first (Phase 2), mobile later (Phase 5). The full spec
-(phases 0–6) is summarised in `docs/architecture.md`; binding decisions are in `docs/decisions.md` (R1–R11).
+(phases 0–6) is summarised in `docs/architecture.md`; binding decisions are in `docs/decisions.md` (R1–R15).
 
 ## Rules that must not be broken
 - **No LLM / no Anthropic API key (R1).** Classification and tags are rules (`scraper/sa_scraper/rules/taxonomy.yaml`).
@@ -54,7 +54,7 @@ dart run build_runner build          # regenerate lib/data/db.g.dart after chang
 flutter analyze --no-pub
 flutter test --no-pub --timeout 90s
 flutter build windows --release      # build\windows\x64\runner\Release\seafarer_assistant.exe
-dart run msix:create                 # installer (not built yet)
+dart run msix:create --build-windows false --install-certificate false   # installer (without the flag it prompts and stays unsigned)
 ```
 
 ## Gotchas already hit (save yourself the time)
@@ -70,6 +70,15 @@ dart run msix:create                 # installer (not built yet)
 - SQLAlchemy 2.1: `rowcount` of `INSERT … ON CONFLICT` is -1; use `RETURNING` to count inserts.
 - Tests share one Postgres test DB and truncate between tests; never point `SA_TEST_DATABASE_URL` at real data
   (the helper refuses names not ending in `_test`).
+- Widget tests that use a Drift database must do DB work inside `tester.runAsync` and, at the end, unmount and
+  `pump(const Duration(seconds: 1))` so Drift's stream-close timer fires; otherwise the test hangs or fails
+  with "A Timer is still pending".
+- **Don't keep the repo inside OneDrive.** OneDrive turns Flutter's plugin symlinks
+  (`app/windows/flutter/ephemeral/.plugin_symlinks`) into synced copies (reparse tag `0x9000e01a`), and every later
+  build fails with "Cannot create link". It also locks `.dart_tool` and makes the local Postgres (`data/pg`) slow
+  and crash-prone. If stuck there: delete the copies in `.plugin_symlinks` (check `LinkType` is empty first, so
+  you never recurse into a real link) and rebuild.
+- The app code is not `dart format`ted (lines up to 120); don't reformat whole files.
 - `pytest.ini` already passes `-q`; adding another `-q` hides the summary line (use `-o addopts=""`).
 
 ## Working style the owner expects

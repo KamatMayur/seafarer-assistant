@@ -1,0 +1,34 @@
+{
+  "_comment": "NRI-day rules for the Sea time screen (informational only, decisions.md R15). Thresholds live here, not in code, because Finance Acts change them. verified_by_owner stays false until the owner (or a tax professional) has checked the citation; the app then shows a 'not yet checked' note.",
+  "updated": "2026-10-14",
+  "regimes": [
+    {
+      "from_fy": 2015,
+      "to_fy": 2025,
+      "law": "Income-tax Act, 1961",
+      "threshold_days": 182,
+      "verified_by_owner": false,
+      "sources": [
+        "Income-tax Act, 1961, section 6(1)(a): resident if in India for 182 days or more in the previous year.",
+        "Section 6(1), Explanation 1(a): for an Indian citizen who leaves India as a member of the crew of an Indian ship or for employment outside India, the 60-day test in clause (c) becomes 182 days.",
+        "Section 6(1), Explanation 2 and Income-tax Rules, 1962, rule 126 (from FY 2015-16): for crew of a ship on an eligible voyage, the days from the sign-on date to the sign-off date entered in the Continuous Discharge Certificate are not counted as days in India."
+      ]
+    },
+    {
+      "from_fy": 2026,
+      "to_fy": null,
+      "law": "Income-tax Act, 2025",
+      "threshold_days": 182,
+      "verified_by_owner": false,
+      "sources": [
+        "Income-tax Act, 2025 (in force from 1 April 2026) replaced the 1961 Act. The 182-day test is assumed to continue; the section numbers have NOT been checked yet."
+      ]
+    }
+  ],
+  "notes": [
+    "Only days between the sign-on and sign-off dates in your CDC count, and only on an eligible voyage (a ship carrying passengers or cargo in international traffic). Coastal voyages between Indian ports do not count.",
+    "Days you are not on board are counted as possibly in India, because the app does not know about trips abroad off the ship.",
+    "Other rules can make you resident anyway, for example the deemed-residency rule for Indian citizens with income from Indian sources above 15 lakh rupees who are not taxed in any other country (Finance Act 2020).",
+    "This is not tax advice. Check with a tax professional before filing your return."
+  ]
+}

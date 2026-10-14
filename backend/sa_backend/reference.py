@@ -179,4 +179,8 @@ LANGUAGES = {
     "gu": "ગુજરાતી",
 }
 DISCLAIMER = "Automatic extract from the official document. Always verify with the official circular."
+SEARCH_DISCLAIMER = (
+    "Quoted passages that contain your search words, not an answer. A newer circular may have changed the rule: "
+    "open the official PDF and check with your MMD."
+)
 UNOFFICIAL = "Independent app. Not affiliated with DGMA, DG Shipping or the Government of India."

@@ -65,6 +65,26 @@ class Certificates extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// Sea service (S15). Same offline-first sync rules as certificates. Dates are 'YYYY-MM-DD' text.
+class SeaServices extends Table {
+  TextColumn get id => text()(); // UUID generated on the device
+  TextColumn get vesselName => text()();
+  TextColumn get imo => text().nullable()();
+  TextColumn get rank => text().nullable()();
+  TextColumn get signOn => text()();
+  TextColumn get signOff => text().nullable()(); // null = still on board
+  TextColumn get shipType => text().nullable()();
+  TextColumn get flag => text().nullable()();
+  IntColumn get version => integer().withDefault(const Constant(0))(); // last server version seen
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get deletedAt => dateTime().nullable()();
+  BoolColumn get dirty => boolean().withDefault(const Constant(true))(); // changed locally, not yet pushed
+  TextColumn get conflictJson => text().nullable()(); // server copy when a sync conflict happened
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Expiry reminders already shown as a Windows toast, so each one appears once.
 class ReminderLog extends Table {
   TextColumn get certificateId => text()();
@@ -76,12 +96,19 @@ class ReminderLog extends Table {
   Set<Column> get primaryKey => {certificateId, expiryDate, bucket};
 }
 
-@DriftDatabase(tables: [KeyValues, FeedItems, CachedDocuments, Certificates, ReminderLog])
+@DriftDatabase(tables: [KeyValues, FeedItems, CachedDocuments, Certificates, ReminderLog, SeaServices])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'seafarer_assistant'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) await m.createTable(seaServices); // v2: sea service log
+        },
+      );
 
   // ---- key/value ----
   Future<String?> getValue(String key) async =>
@@ -99,6 +126,7 @@ class AppDatabase extends _$AppDatabase {
   Future<void> wipeUserData() => transaction(() async {
         await delete(feedItems).go();
         await delete(certificates).go();
+        await delete(seaServices).go();
         await delete(reminderLog).go();
         await (delete(keyValues)..where((t) => t.key.isNotIn(['api_base', 'data_saver']))).go();
       });

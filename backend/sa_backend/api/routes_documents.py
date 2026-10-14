@@ -5,7 +5,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import RedirectResponse
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, func, or_, select, text
 from sqlalchemy.orm import Session
 
 from sa_backend.api.deps import DB, CurrentUser
@@ -16,6 +16,8 @@ from sa_backend.api.schemas import (
     FeedPage,
     Impact,
     Lang,
+    Passage,
+    PassagePage,
     Related,
     SearchPage,
     Summary,
@@ -130,6 +132,84 @@ def search(
     total = db.scalar(select(func.count()).select_from(Document).where(where))
     rows = db.scalars(select(Document).where(where).order_by(*order).offset((page - 1) * 20).limit(20)).all()
     return SearchPage(items=[card(d, lang) for d in rows], total=total, page=page)
+
+
+# Cited search (R1: quotes only, no generated answer). raw_text keeps pages separated by \f (see extract.py), so
+# pages are split at query time: nothing to backfill, and admin edits / reprocessing are always reflected.
+_START, _STOP = "⟦", "⟧"  # match markers; stripped before the quote is returned
+_PASSAGES_SQL = text(
+    """
+    WITH tsq AS (SELECT websearch_to_tsquery('english', :q) AS q),
+    cand AS (
+        SELECT d.id, d.raw_text, ts_rank(d.fts, tsq.q) AS doc_rank
+        FROM documents d, tsq
+        WHERE d.fts @@ tsq.q AND d.raw_text IS NOT NULL
+          AND d.id NOT IN (SELECT document_id FROM document_tags WHERE kind = 'audience' AND value = 'internal')
+        ORDER BY doc_rank DESC, d.published_date DESC NULLS LAST
+        LIMIT 40
+    ),
+    pages AS (
+        SELECT c.id, c.doc_rank, p.page::int AS page, p.txt
+        FROM cand c, regexp_split_to_table(c.raw_text, E'\\f') WITH ORDINALITY AS p(txt, page)
+    ),
+    scored AS (
+        SELECT pages.*, ts_rank_cd(to_tsvector('english', txt), tsq.q) AS page_rank,
+               row_number() OVER (PARTITION BY id ORDER BY ts_rank_cd(to_tsvector('english', txt), tsq.q) DESC,
+                                  page) AS nth
+        FROM pages, tsq
+        WHERE to_tsvector('english', txt) @@ tsq.q
+    )
+    SELECT s.id, s.page,
+           ts_headline('english', s.txt, tsq.q, :opts) AS quote
+    FROM scored s, tsq
+    WHERE s.nth <= 2
+    ORDER BY s.page_rank + s.doc_rank DESC, s.page
+    LIMIT :limit
+    """
+)
+_HEADLINE_OPTS = (
+    f'StartSel="{_START}", StopSel="{_STOP}", MaxFragments=2, MaxWords=40, MinWords=15, FragmentDelimiter=" … "'
+)
+
+
+def split_marks(headline: str) -> tuple[str, list[tuple[int, int]]]:
+    """Turn ts_headline output into plain text plus [start, end) offsets of the highlighted words."""
+    out: list[str] = []
+    marks: list[tuple[int, int]] = []
+    pos, start = 0, None
+    for ch in headline:
+        if ch == _START:
+            start = pos
+        elif ch == _STOP:
+            if start is not None and pos > start:
+                marks.append((start, pos))
+            start = None
+        else:
+            out.append(ch)
+            pos += 1
+    return "".join(out), marks
+
+
+@router.get("/search/passages", response_model=PassagePage)
+def search_passages(
+    _: CurrentUser,
+    db: DB,
+    q: str = Query(..., min_length=2, max_length=200),
+    limit: int = Query(10, ge=1, le=30),
+    lang: Lang = "en",
+) -> PassagePage:
+    rows = db.execute(_PASSAGES_SQL, {"q": q, "opts": _HEADLINE_OPTS, "limit": limit}).all()
+    docs = {d.id: d for d in db.scalars(select(Document).where(Document.id.in_({r.id for r in rows})))} if rows else {}
+    items = []
+    for r in rows:
+        quote, marks = split_marks(r.quote)
+        doc = docs[r.id]
+        items.append(
+            Passage(
+                document=card(doc, lang), page=r.page, quote=quote, marks=marks, pdf_url=f"{doc.pdf_url}#page={r.page}"
+            )
+        )
+    return PassagePage(query=q, items=items)
 
 
 def _related(db: Session, doc: Document) -> list[Related]:

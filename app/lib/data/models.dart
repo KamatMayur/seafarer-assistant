@@ -47,6 +47,22 @@ class DocumentCard {
   bool get isCritical => priority == 'critical';
 }
 
+/// Cited search hit: verbatim text from one PDF page (R1: quotes only). [marks] are [start, end) offsets.
+class Passage {
+  Passage.fromJson(Map<String, dynamic> j)
+      : document = DocumentCard.fromJson(j['document'] as Map<String, dynamic>),
+        page = j['page'] as int,
+        quote = j['quote'] as String,
+        marks = [for (final m in j['marks'] as List) (m[0] as int, m[1] as int)],
+        pdfUrl = j['pdf_url'] as String;
+
+  final DocumentCard document;
+  final int page;
+  final String quote;
+  final List<(int, int)> marks;
+  final String pdfUrl;
+}
+
 class Summary {
   Summary.fromJson(Map<String, dynamic> j)
       : language = j['language'] as String,

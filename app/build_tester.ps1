@@ -19,7 +19,7 @@ Write-Host "Building Seafarer Assistant $Version for $ApiBase ..."
 flutter build windows --release --dart-define=API_BASE=$ApiBase
 if ($LASTEXITCODE -ne 0) { throw 'flutter build failed' }
 
-dart run msix:create --build-windows false --version $msixVersion
+dart run msix:create --build-windows false --install-certificate false --version $msixVersion  # without the flag it prompts and leaves the package unsigned
 if ($LASTEXITCODE -ne 0) { throw 'msix:create failed' }
 
 $msix = Join-Path $PSScriptRoot 'build\windows\x64\runner\Release\seafarer_assistant.msix'

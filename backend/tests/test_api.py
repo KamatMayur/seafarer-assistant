@@ -99,7 +99,7 @@ def test_login_profile_and_refresh_rotation(client, caplog):
 
 def _seed_document(db, title="FAKE circular for engine officers", dept="engine"):
     with db() as s:
-        s.add(Source(id="yl_dgs_circulars", url="https://dgma.gov.in/x"))
+        s.merge(Source(id="yl_dgs_circulars", url="https://dgma.gov.in/x"))
         s.flush()
         doc = Document(
             source_id="yl_dgs_circulars",
@@ -169,6 +169,53 @@ def test_feed_document_detail_and_search(client, caplog, db):
     assert r.status_code == 302 and r.headers["location"].startswith("https://dgma.gov.in/")
 
 
+def test_cited_passage_search_quotes_the_right_page(client, caplog, db):
+    from sa_backend.api.routes_documents import split_marks
+
+    tokens = login(client, caplog)
+    doc = _seed_document(db)
+    internal = _seed_document(db, title="FAKE internal office order")
+    pages = [
+        "FAKE page one. Subject: general matters for all seafarers and shipping companies in India.",
+        "FAKE page two. Seafarers shall complete the revalidation of their Certificate of Competency "
+        "through the e-governance portal before the expiry of the certificate.",
+        "FAKE page three. This issues with the approval of the competent authority.",
+    ]
+    with db() as s:
+        s.get(Document, doc.id).raw_text = "\f".join(pages)
+        s.get(Document, internal.id).raw_text = "FAKE revalidation of CoC for staff"
+        s.add(DocumentTag(document_id=internal.id, kind="audience", value="internal", strength="title"))
+        s.add(
+            Document(
+                source_id="yl_dgs_circulars",
+                source_url="https://dgma.gov.in/x",
+                pdf_url="https://dgma.gov.in/download/fake-results.pdf",
+                title="FAKE revalidation results list",
+                status="processed",
+                text_policy="metadata_only",
+            )
+        )
+        s.commit()
+
+    r = client.get("/v1/search/passages?q=revalidation certificate", headers=auth(tokens))
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["disclaimer"].startswith("Quoted passages")
+    assert [(i["document"]["id"], i["page"]) for i in body["items"]] == [(str(doc.id), 2)]
+    hit = body["items"][0]
+    assert hit["pdf_url"].endswith(".pdf#page=2")
+    assert "revalidation" in hit["quote"] and "⟦" not in hit["quote"]
+    marked = {hit["quote"][a:b].lower() for a, b in hit["marks"]}
+    assert {"revalidation", "certificate"} <= marked
+    # every word shown is verbatim from the page (extractive, R1)
+    assert all(part.strip() in pages[1] for part in hit["quote"].split(" … "))
+
+    assert client.get("/v1/search/passages?q=zzzz nothing", headers=auth(tokens)).json()["items"] == []
+    assert client.get("/v1/search/passages?q=x", headers=auth(tokens)).status_code == 422
+    assert client.get("/v1/search/passages?q=revalidation").status_code == 401
+    assert split_marks("a ⟦bc⟧ d") == ("a bc d", [(2, 4)])
+
+
 def test_sync_conflict_is_not_silently_overwritten(client, caplog):
     tokens = login(client, caplog)
     cid = str(uuid.uuid4())
@@ -203,6 +250,32 @@ def test_sync_conflict_is_not_silently_overwritten(client, caplog):
     assert changes["certificates"][0]["deleted_at"] is not None
     later = client.get(f"/v1/sync/changes?since={changes['cursor']}", headers=auth(tokens)).json()
     assert later["certificates"] == []
+
+
+def test_sea_service_sync_versions_conflicts_and_privacy(client, caplog):
+    tokens = login(client, caplog)
+    sid = str(uuid.uuid4())
+    row = {"id": sid, "vessel_name": "FAKE MV Example", "imo": "9000001", "rank": "third_officer"}
+    row |= {"sign_on": "2026-01-10", "ship_type": "tanker", "flag": "Liberia"}
+
+    def push(items, t=tokens):
+        return client.post("/v1/sync/push", headers=auth(t), json={"sea_service": items})
+
+    assert push([{**row, "version": 0}]).json()["applied"][sid] == 1
+    assert push([{**row, "sign_off": "2026-06-30", "version": 1}]).json()["applied"][sid] == 2
+    # another device edited from version 1 while offline -> conflict, server keeps the sign-off
+    r = push([{**row, "rank": "second_officer", "version": 1}]).json()
+    assert r["applied"] == {}
+    assert r["conflicts"][0]["entity"] == "sea_service" and r["conflicts"][0]["server"]["sign_off"] == "2026-06-30"
+    assert push([{**row, "sign_on": "2026-07-01", "sign_off": "2026-06-30", "version": 2}]).status_code == 422
+    assert push([{**row, "id": str(uuid.uuid4()), "imo": "12345", "version": 0}]).status_code == 422
+
+    changes = client.get("/v1/sync/changes", headers=auth(tokens)).json()
+    assert [(s["id"], s["version"], s["sign_off"]) for s in changes["sea_service"]] == [(sid, 2, "2026-06-30")]
+    # another account never sees it and cannot take over the id
+    other = login(client, caplog, email="other@example.com")
+    assert client.get("/v1/sync/changes", headers=auth(other)).json()["sea_service"] == []
+    assert push([{**row, "version": 2}], t=other).status_code == 409
 
 
 def test_sync_rejects_bad_dates(client, caplog):

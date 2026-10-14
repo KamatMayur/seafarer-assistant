@@ -67,6 +67,28 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | C4 | Device timezone not IST | Reminders fire on the IST date the user expects (documented choice) |
 | C5 | Changing offsets after creating a certificate | Reminders rescheduled; no duplicates |
 
+## Cited search (Phase 3)
+| # | Case | Expected | Auto | Manual |
+|---|---|---|---|---|
+| Q1 | Words found on page 2 of a 3-page circular | One passage, `page = 2`, PDF link ends `#page=2`, matched words marked | test_api::test_cited_passage_search_quotes_the_right_page | |
+| Q2 | Quote shown to the user | Every fragment is verbatim page text (no generated words, R1) | same | ☐ spot-check 5 real queries against the PDFs |
+| Q3 | Internal-audience and metadata-only documents | Never returned | same | |
+| Q4 | Matched-word offsets outside the quote | Clamped, no crash | widgets_test: passage card | |
+| Q5 | Quotes mode while offline | Message to switch to Documents; no crash | | ☐ |
+| Q6 | "Official PDF, page N" | Opens the official PDF at that page in the browser | | ☐ |
+
+## Sea time & NRI days (Phase 3)
+| # | Case | Expected | Auto | Manual |
+|---|---|---|---|---|
+| ST1 | Add a ship offline, reconnect | Synced; no loss; other device sees it | sea_service_sync_test | ☐ |
+| ST2 | Same entry edited on two devices | Conflict shown, "Keep mine"/"Keep the other version" | sea_service_sync_test; test_api::test_sea_service_sync_versions_conflicts_and_privacy | ☐ |
+| ST3 | Sign-off before sign-on, bad IMO | Refused in the form and by the API (422) | test_api::test_sea_service_sync_versions_conflicts_and_privacy | ☐ |
+| ST4 | Overlapping entries | Total counts each day once; per-rank totals per entry | sea_time_test | |
+| ST5 | Spell across 31 March | Days split between the two financial years; leap years right | sea_time_test | |
+| ST6 | Current financial year | "(so far)" and days left below 182 | sea_time_test | ☐ |
+| ST7 | Rules not checked by the owner | Warning shown on the NRI card; sources listed | sea_time_test (widget) | ☐ owner checks citations |
+| ST8 | Upgrade from an app build before sea time (DB schema v1) | Sea time tab works; certificates and feed kept | | ☐ |
+
 ## OCR (Phase 3/5)
 - Blurry · rotated 90/180° · multi-page · laminated glare · Hindi + English mixed · DD-MM vs MM-DD ambiguity. The user must confirm every field before saving.
 

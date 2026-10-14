@@ -8,8 +8,10 @@ import '../../core/api_client.dart';
 import '../../core/providers.dart';
 import '../../data/models.dart';
 import '../../widgets/common.dart';
+import 'passage_tile.dart';
 
 /// S6: search all circulars and notices (server full-text search; saved documents only when offline).
+/// "Quotes" mode is cited search (S14 under R1): verbatim passages with page numbers, online only.
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -21,6 +23,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _q = TextEditingController();
   String? _type, _dept;
   List<DocumentCard> _items = [];
+  bool _quotes = false;
+  List<Passage> _passages = [];
+  String _disclaimer = '';
   int _total = 0, _page = 1;
   bool _loading = false, _offline = false;
   String? _error;
@@ -39,6 +44,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Future<void> _search({bool more = false}) async {
+    if (_quotes) return _searchPassages();
     setState(() {
       _loading = true;
       _error = null;
@@ -64,9 +70,68 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     }
   }
 
+  Future<void> _searchPassages() async {
+    final q = _q.text.trim();
+    if (q.length < 2) {
+      setState(() {
+        _passages = [];
+        _error = null;
+      });
+      return;
+    }
+    setState(() {
+      _loading = true;
+      _error = null;
+      _offline = false;
+    });
+    try {
+      final r = await ref.read(documentRepoProvider).passages(q);
+      // Left the Archive tab, switched mode, or typed more while this was loading: drop the stale answer.
+      if (!mounted || !_quotes || q != _q.text.trim()) return;
+      setState(() {
+        _passages = r.items;
+        _disclaimer = r.disclaimer;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _passages = [];
+        _offline = e.offline;
+        _error = e.offline ? 'Quote search needs a connection. Switch to Documents to search saved documents.' : e.message;
+      });
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   void _onTyped(String _) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 450), _search);
+  }
+
+  Widget _passageList() {
+    if (_loading) return const Center(child: CircularProgressIndicator());
+    if (_error != null) return const SizedBox.shrink();
+    if (_passages.isEmpty) {
+      return EmptyState(
+        icon: Icons.format_quote,
+        title: _q.text.trim().length < 2 ? 'Search the text of every circular' : 'No passage contains all these words',
+        message: 'Shows the exact sentences from the PDFs, with the page number, so you can check the rule yourself. '
+            'Try fewer or different words.',
+      );
+    }
+    return ListView(padding: const EdgeInsets.fromLTRB(8, 0, 8, 24), children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(8, 4, 8, 8),
+        child: Row(children: [
+          const Icon(Icons.info_outline, size: 16),
+          const SizedBox(width: 6),
+          Expanded(child: Text(_disclaimer, style: Theme.of(context).textTheme.bodySmall)),
+        ]),
+      ),
+      for (final p in _passages)
+        PassageTile(passage: p, onOpenDocument: () => context.push('/document/${p.document.id}')),
+    ]);
   }
 
   @override
@@ -83,7 +148,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             onSubmitted: (_) => _search(),
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.search),
-              hintText: 'Search circulars, e.g. "CoC revalidation" or "53 of 2026"',
+              hintText: _quotes
+                  ? 'Find the exact wording, e.g. "sea service revalidation"'
+                  : 'Search circulars, e.g. "CoC revalidation" or "53 of 2026"',
               suffixIcon: _q.text.isEmpty
                   ? null
                   : IconButton(
@@ -96,7 +163,21 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ),
         ),
-        SingleChildScrollView(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          child: SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment(value: false, icon: Icon(Icons.description_outlined), label: Text('Documents')),
+              ButtonSegment(value: true, icon: Icon(Icons.format_quote), label: Text('Quotes')),
+            ],
+            selected: {_quotes},
+            onSelectionChanged: (s) {
+              setState(() => _quotes = s.first);
+              _search();
+            },
+          ),
+        ),
+        if (!_quotes) SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Row(children: [
@@ -128,14 +209,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
           ]),
         ),
-        if (_offline)
+        if (_offline && !_quotes)
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text('Offline: searching only documents saved on this device.'),
           ),
         if (_error != null)
           Padding(padding: const EdgeInsets.all(16), child: Text(_error!)),
-        Expanded(
+        if (_quotes) Expanded(child: _passageList()) else Expanded(
           child: _items.isEmpty && !_loading
               ? const EmptyState(icon: Icons.search_off, title: 'No documents found')
               : ListView.builder(

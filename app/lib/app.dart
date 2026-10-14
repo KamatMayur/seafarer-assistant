@@ -8,6 +8,8 @@ import 'features/feed/feed_screen.dart';
 import 'features/onboarding/profile_setup_screen.dart';
 import 'features/onboarding/sign_in_screen.dart';
 import 'features/onboarding/welcome_screen.dart';
+import 'features/sea_time/sea_service_form_screen.dart';
+import 'features/sea_time/sea_time_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/settings/privacy_screen.dart';
 import 'features/settings/settings_screen.dart';
@@ -70,6 +72,14 @@ final routerProvider = Provider<GoRouter>((ref) {
               GoRoute(path: ':id', builder: (_, s) => CertificateFormScreen(certificateId: s.pathParameters['id'])),
             ],
           ),
+          GoRoute(
+            path: '/sea',
+            builder: (_, _) => const SeaTimeScreen(),
+            routes: [
+              GoRoute(path: 'new', builder: (_, _) => const SeaServiceFormScreen()),
+              GoRoute(path: ':id', builder: (_, s) => SeaServiceFormScreen(entryId: s.pathParameters['id'])),
+            ],
+          ),
           GoRoute(path: '/settings', builder: (_, _) => const SettingsScreen()),
           GoRoute(
             path: '/settings/profile',
@@ -129,6 +139,7 @@ class _Shell extends StatelessWidget {
     (path: '/feed', icon: Icons.notifications_outlined, active: Icons.notifications, label: 'For you'),
     (path: '/search', icon: Icons.search, active: Icons.search, label: 'Archive'),
     (path: '/wallet', icon: Icons.wallet_outlined, active: Icons.wallet, label: 'Wallet'),
+    (path: '/sea', icon: Icons.sailing_outlined, active: Icons.sailing, label: 'Sea time'),
     (path: '/settings', icon: Icons.settings_outlined, active: Icons.settings, label: 'Settings'),
   ];
 
