@@ -89,6 +89,14 @@ Maintained across all phases. Column **Auto** gives the automated test that cove
 | ST7 | Rules not checked by the owner | Warning shown on the NRI card; sources listed | sea_time_test (widget) | ☐ owner checks citations |
 | ST8 | Upgrade from an app build before sea time (DB schema v1) | Sea time tab works; certificates and feed kept | | ☐ |
 
+## PDF export (Phase 3)
+| # | Case | Expected | Auto | Manual |
+|---|---|---|---|---|
+| X1 | Sea service summary | All ships, days, totals by rank/ship type; footer on every page | pdf_export_test | ☐ open in a PDF viewer |
+| X2 | Certificates pack with a JPG/PNG scan and a PDF scan | Image gets its own page; PDF scan listed as "kept in the app" | pdf_export_test | ☐ |
+| X3 | Vessel name in Devanagari | PDF still builds; those letters print as '?' (R16 limit) | pdf_export_test | |
+| X4 | Cancel the save dialog | Nothing written, no error | | ☐ |
+
 ## OCR (Phase 3/5)
 - Blurry · rotated 90/180° · multi-page · laminated glare · Hindi + English mixed · DD-MM vs MM-DD ambiguity. The user must confirm every field before saving.
 

@@ -7,6 +7,7 @@ import '../../data/db.dart';
 import '../../domain/expiry.dart';
 import '../../domain/sea_time.dart';
 import '../../widgets/common.dart';
+import '../export/export_actions.dart';
 
 SeaSpell spellOf(SeaService s) =>
     SeaSpell(signOn: parseDay(s.signOn)!, signOff: parseDay(s.signOff), rank: s.rank, shipType: s.shipType);
@@ -19,7 +20,14 @@ class SeaTimeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = ref.watch(seaServiceProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Sea time')),
+      appBar: AppBar(title: const Text('Sea time'), actions: [
+        if (entries.value?.isNotEmpty == true)
+          IconButton(
+            tooltip: 'Export PDF',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: () => exportSeaServicePdf(context, ref),
+          ),
+      ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/sea/new'),
         icon: const Icon(Icons.add),

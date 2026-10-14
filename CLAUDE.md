@@ -7,7 +7,7 @@ rules and the commands.
 An **independent** assistant for Indian merchant navy seafarers. It watches public dgma.gov.in pages for circulars,
 exam notices and advisories, extracts and tags them, alerts only the seafarers they concern, and keeps a
 certificate wallet with expiry reminders. Windows app first (Phase 2), mobile later (Phase 5). The full spec
-(phases 0–6) is summarised in `docs/architecture.md`; binding decisions are in `docs/decisions.md` (R1–R15).
+(phases 0–6) is summarised in `docs/architecture.md`; binding decisions are in `docs/decisions.md` (R1–R16).
 
 ## Rules that must not be broken
 - **No LLM / no Anthropic API key (R1).** Classification and tags are rules (`scraper/sa_scraper/rules/taxonomy.yaml`).

@@ -11,7 +11,7 @@ extractive summary (quotes only), and creates alerts for users whose profile mat
 exam grades, ship types, followed topics, certificates held). The app shows those alerts, the documents, an
 archive search and a certificate wallet with expiry reminders, and works offline. **Phase 1 (backend) is
 complete. Phase 2 (Windows app) is complete and ready for testers except hosting** (see "Next steps").
-Phase 3 has started: certificate scan reading (R12), cited search (R14), sea time + NRI days (R15). Phases 4–6 not started.
+Phase 3 has started: certificate scan reading (R12), cited search (R14), sea time + NRI days (R15), PDF export (R16). Phases 4–6 not started.
 
 ## Status by phase
 | Phase | State |
@@ -19,7 +19,7 @@ Phase 3 has started: certificate scan reading (R12), cited search (R14), sea tim
 | 0 Plan | Done: `docs/architecture.md`, `schema.sql`, `openapi.yaml`, `screens.md`, `decisions.md` |
 | 1 Backend pipeline + admin | **Done.** 13 sources healthy; 129 tests pass; ruff clean. Admin UI at `/admin` with per-admin accounts (password + TOTP). Not done: Docker compose smoke test (no Docker on the dev machine). |
 | 2 Windows app | **Done, waiting for a server.** All app tests pass, incl. a full UI journey on the real app (`integration_test/`). Tray + start with Windows, single instance, report a problem, crash reports, privacy notice, tester tips, MSIX installer script. Certificate scan reading (on-device Windows OCR, R12). |
-| 3 | **Started.** Done: OCR scan (R12, listed under Phase 2 above); cited search – `GET /v1/search/passages` + "Quotes" mode in Archive (verbatim passages with page numbers and a link to the official PDF at that page; R14); sea time + NRI days – "Sea time" tab, synced log, totals by rank/ship type, NRI days per financial year from `app/assets/nri_rules.json` (R15; **owner must check the tax citations**). To do (order by tester feedback): exam countdown cards, RPSL/vessel checks, regional languages (IndicTrans2), PDF export (sea service summary + certificates pack). |
+| 3 | **Started.** Done: OCR scan (R12, listed under Phase 2 above); cited search – `GET /v1/search/passages` + "Quotes" mode in Archive (verbatim passages with page numbers and a link to the official PDF at that page; R14); sea time + NRI days – "Sea time" tab, synced log, totals by rank/ship type, NRI days per financial year from `app/assets/nri_rules.json` (R15; **owner must check the tax citations**). PDF export – sea service summary + certificates pack, built on the device (R16). To do (order by tester feedback): exam countdown cards and RPSL/vessel checks (both need real scraped data to build safely), regional languages (IndicTrans2, multi-GB model), premium gating (needs Razorpay + business entity). |
 | 4–6 | Not started (premium, mobile, launch). |
 
 ## Binding decisions (details in docs/decisions.md)
@@ -36,6 +36,7 @@ Phase 3 has started: certificate scan reading (R12), cited search (R14), sea tim
 - **R12** Certificate OCR on the device. **R13** Profile fields must agree.
 - **R14** Cited search replaces "Ask about the rules": verbatim passages with page numbers, no generated answer.
 - **R15** Sea time + NRI days computed on the device; tax thresholds and citations in `app/assets/nri_rules.json`, unverified until the owner checks them.
+- **R16** PDF export on the device; Latin-1 font only for now.
 - Owner applied defaults for R7–R11 to finish Phase 1; they can still change them.
 
 ## What exists (where to look)
@@ -121,3 +122,5 @@ cd app; flutter pub get; dart run build_runner build; flutter test --no-pub; flu
   table), `SeaServiceRepository` sync, Sea time tab + form, `domain/sea_time.dart`, rules file with citations;
   backend tests for sea-service sync. Owner to do: check the citations in `app/assets/nri_rules.json` (especially
   the Income-tax Act, 2025) and set `verified_by_owner` to true per regime.
+- 14-Oct-2026: PDF export (R16): `features/export/` (pure builders + save actions), Export PDF buttons on Sea time
+  and Wallet, tests incl. a FAKE PNG scan page.

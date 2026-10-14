@@ -6,6 +6,7 @@ import '../../core/providers.dart';
 import '../../data/db.dart';
 import '../../domain/expiry.dart';
 import '../../widgets/common.dart';
+import '../export/export_actions.dart';
 
 String certTitle(Certificate c, Map<String, String>? labels) {
   final base = labels?[c.type] ?? c.type.toUpperCase();
@@ -22,7 +23,14 @@ class WalletScreen extends ConsumerWidget {
     final labels = ref.watch(metaProvider).value?.certTypes;
     final today = todayIst();
     return Scaffold(
-      appBar: AppBar(title: const Text('Wallet')),
+      appBar: AppBar(title: const Text('Wallet'), actions: [
+        if (certs.value?.isNotEmpty == true)
+          IconButton(
+            tooltip: 'Export PDF',
+            icon: const Icon(Icons.picture_as_pdf_outlined),
+            onPressed: () => exportCertificatesPdf(context, ref),
+          ),
+      ]),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/wallet/new'),
         icon: const Icon(Icons.add),
